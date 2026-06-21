@@ -1,41 +1,40 @@
-import 'package:flutter/material.dart';
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:super_project/View/SplashScreen.dart';
+import 'package:super_project/repository/authRepository.dart';
+import 'package:super_project/repository/projectRepository.dart';
+import 'package:super_project/viewmodel/Bloc/authBloc.dart';
+import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(const WorkSphereApp());
+  runApp(MyApp());
 }
 
-class WorkSphereApp extends StatelessWidget {
-  const WorkSphereApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WorkSphere',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: const Color(0xFF5A4BCC),
-        scaffoldBackgroundColor: const Color(0xFFF6F5F8),
-        fontFamily: 'Poppins',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5A4BCC),
-          brightness: Brightness.light,
-        ),
+    return MultiBlocProvider(
+  providers: [
+    BlocProvider(
+      create: (_) => AuthBloc(AuthRepository()),
+    ),
+
+    BlocProvider(
+      create: (_) => ProjectBloc(
+        ProjectRepository(),
       ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: const Color(0xFF5A4BCC),
-        scaffoldBackgroundColor: const Color(0xFF110F23),
-        fontFamily: 'Poppins',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5A4BCC),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: const SplashScreen(),
-    );
+    ),
+  ],
+  child: MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: const SplashScreen(),
+  ),
+);
   }
 }

@@ -1,11 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:super_project/View/ClientScreens/ClientDashboard.dart';
 import 'package:super_project/View/FreelancerDashboard/freelancerDashboard.dart';
-
-// Match these to your actual LoginScreen import + theme color constant
-// import 'loginScreen.dart';
+import 'package:super_project/viewmodel/Bloc/authBloc.dart';
+import 'package:super_project/viewmodel/Events/authEvent.dart';
+import 'package:super_project/viewmodel/States/authState.dart';
 
 const Color kWorkSpherePurple = Color(0xFFB4B0F5);
 const Color kWorkSpherePurpleDark = Color(0xFF5B67F1);
@@ -31,90 +30,18 @@ class _SignUpState extends State<Signupscreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading = false;
 
-  Future<void> registerUser() async {
+  void _onSignUpPressed() {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
-    try {
-      // Step 1: Create the user in Firebase Authentication
-      UserCredential credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      // Step 2: Save profile info (including role) in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(credential.user!.uid)
-          .set({
-        "uid": credential.user!.uid,
-        "name": _nameController.text.trim(),
-        "email": _emailController.text.trim(),
-        "role": widget.role,
-        "createdAt": Timestamp.now(),
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Account created successfully")),
-      );
-
-      // Step 3: Route to the correct dashboard based on role
-      _navigateToDashboard();
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = "An account already exists for that email.";
-          break;
-        case 'weak-password':
-          message = "Password is too weak. Use at least 6 characters.";
-          break;
-        case 'invalid-email':
-          message = "That email address looks invalid.";
-          break;
-        default:
-          message = e.message ?? "Registration failed.";
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Something went wrong: $e")),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _navigateToDashboard() {
-    final normalizedRole = widget.role.trim().toLowerCase();
-
-    Widget destination;
-    if (normalizedRole == "client") {
-      destination = ClientDashboardPage();
-    } else if (normalizedRole == "freelancer") {
-      destination = Freelancerdashboard();
-    } else {
-      // Unknown role string — fall back to login rather than crash
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      return;
-    }
-
-    // Clears the ChoosePathPage/Signupscreen stack so back button
-    // doesn't return to signup once inside the dashboard
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => destination),
-      (route) => false,
-    );
+    context.read<AuthBloc>().add(
+          RegisterRequested(
+            name: _nameController.text.trim(),
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+            role: widget.role,
+          ),
+        );
   }
 
   @override
@@ -150,7 +77,8 @@ class _SignUpState extends State<Signupscreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: kWorkSpherePurpleDark, width: 1.5),
+        borderSide:
+            const BorderSide(color: kWorkSpherePurpleDark, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -182,220 +110,258 @@ class _SignUpState extends State<Signupscreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 12),
+          child: BlocConsumer<AuthBloc, AuthState>(
+            listener: (context, state) {
+              if (state is AuthSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Account created successfully"),
+                  ),
+                );
 
-                // Back + role badge
-                Row(
+                final role = state.user.role;
+                Widget destination;
+                if (role == 'client') {
+                  destination = ClientDashboardPage();
+                } else if (role == 'freelancer') {
+                  destination = Freelancerdashboard();
+                } else {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  return;
+                }
+
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => destination),
+                  (route) => false,
+                );
+              } else if (state is AuthFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.message)),
+                );
+              }
+            },
+            builder: (context, state) {
+              final isLoading = state is AuthLoading;
+
+              return Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back, color: Colors.black),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    const SizedBox(height: 12),
+
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.arrow_back,
+                              color: Colors.black),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00BFA5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isClient ? 'Client' : 'Freelancer',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00BFA5),
-                        borderRadius: BorderRadius.circular(20),
+
+                    const SizedBox(height: 24),
+
+                    const Text(
+                      'Create your account',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
-                      child: Text(
-                        isClient ? 'Client' : 'Freelancer',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isClient
+                          ? "Sign up to post projects and hire top talent."
+                          : "Sign up to offer your skills and start earning.",
+                      style:
+                          TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    _fieldLabel("Full Name"),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: _fieldDecoration(
+                        hint: "Enter your full name",
+                        icon: Icons.person_outline,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Please enter your name";
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    _fieldLabel("Email"),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: _fieldDecoration(
+                        hint: "Enter your email",
+                        icon: Icons.mail_outline,
+                      ),
+                      validator: (value) {
+                        final v = value?.trim() ?? '';
+                        if (v.isEmpty) return "Please enter your email";
+                        final emailRegex =
+                            RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                        if (!emailRegex.hasMatch(v)) {
+                          return "Enter a valid email address";
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    _fieldLabel("Password"),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: _fieldDecoration(
+                        hint: "Enter your password",
+                        icon: Icons.lock_outline,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: Colors.grey[500],
+                            size: 20,
+                          ),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter a password";
+                        }
+                        if (value.length < 6) {
+                          return "Password must be at least 6 characters";
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    _fieldLabel("Confirm Password"),
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      decoration: _fieldDecoration(
+                        hint: "Re-enter your password",
+                        icon: Icons.lock_outline,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: Colors.grey[500],
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() =>
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value != _passwordController.text) {
+                          return "Passwords do not match";
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : _onSignUpPressed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kWorkSpherePurple,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey[300],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                "Sign Up",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text.rich(
+                          TextSpan(
+                            text: "Already have an account? ",
+                            style: TextStyle(color: Colors.grey[600]),
+                            children: const [
+                              TextSpan(
+                                text: "Login",
+                                style: TextStyle(
+                                  color: kWorkSpherePurpleDark,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-
-                const Text(
-                  'Create your account',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isClient
-                      ? "Sign up to post projects and hire top talent."
-                      : "Sign up to offer your skills and start earning.",
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-
-                const SizedBox(height: 32),
-
-                _fieldLabel("Full Name"),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: _fieldDecoration(
-                    hint: "Enter your full name",
-                    icon: Icons.person_outline,
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return "Please enter your name";
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 18),
-
-                _fieldLabel("Email"),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: _fieldDecoration(
-                    hint: "Enter your email",
-                    icon: Icons.mail_outline,
-                  ),
-                  validator: (value) {
-                    final v = value?.trim() ?? '';
-                    if (v.isEmpty) return "Please enter your email";
-                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (!emailRegex.hasMatch(v)) {
-                      return "Enter a valid email address";
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 18),
-
-                _fieldLabel("Password"),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: _fieldDecoration(
-                    hint: "Enter your password",
-                    icon: Icons.lock_outline,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: Colors.grey[500],
-                        size: 20,
-                      ),
-                      onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Please enter a password";
-                    }
-                    if (value.length < 6) {
-                      return "Password must be at least 6 characters";
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 18),
-
-                _fieldLabel("Confirm Password"),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  decoration: _fieldDecoration(
-                    hint: "Re-enter your password",
-                    icon: Icons.lock_outline,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: Colors.grey[500],
-                        size: 20,
-                      ),
-                      onPressed: () => setState(() =>
-                          _obscureConfirmPassword = !_obscureConfirmPassword),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value != _passwordController.text) {
-                      return "Passwords do not match";
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 32),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : registerUser,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kWorkSpherePurple,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey[300],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            "Sign Up",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text.rich(
-                      TextSpan(
-                        text: "Already have an account? ",
-                        style: TextStyle(color: Colors.grey[600]),
-                        children: const [
-                          TextSpan(
-                            text: "Login",
-                            style: TextStyle(
-                              color: kWorkSpherePurpleDark,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),

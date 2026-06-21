@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:super_project/View/FreelancerDashboard/FreelancerProfile.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
+
 import 'projectDetails.dart';
 
 class Freelancerdashboard extends StatefulWidget {

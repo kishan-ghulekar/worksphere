@@ -1,4 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
+import 'package:super_project/viewmodel/Events/projectEvent.dart';
+import 'package:super_project/viewmodel/States/projectState.dart';
 
 class PostProjectScreen extends StatefulWidget {
   const PostProjectScreen({super.key});
@@ -35,6 +40,53 @@ class _PostProjectScreenState extends State<PostProjectScreen> {
     'Weekend Only': true,
   };
 
+  void _onPostProjectPressed() {
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    final budgetText = _budgetController.text.trim();
+    final durationNumber = _durationController.text.trim();
+
+    if (title.isEmpty || description.isEmpty || budgetText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all required fields")),
+      );
+      return;
+    }
+
+    final budget = double.tryParse(budgetText);
+    if (budget == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Budget must be a valid number")),
+      );
+      return;
+    }
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("You must be logged in to post a project"),
+        ),
+      );
+      return;
+    }
+
+    // Combine "Fixed Price"/"Hourly Rate" and "3 Weeks" into the single
+    // duration/budget strings the Firestore schema expects.
+    final durationCombined = "$durationNumber $_selectedDurationType";
+
+    context.read<ProjectBloc>().add(
+          CreateProjectRequested(
+            clientId: currentUser.uid,
+            title: title,
+            description: description,
+            category: _selectedCategory,
+            budget: budget,
+            duration: durationCombined,
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,21 +114,42 @@ class _PostProjectScreenState extends State<PostProjectScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildProjectDetails(),
-            const SizedBox(height: 16),
-            _buildBudgetDuration(),
-            const SizedBox(height: 16),
-            _buildAttachments(),
-            const SizedBox(height: 16),
-            _buildPreferences(),
-            const SizedBox(height: 24),
-            _buildPostButton(),
-            const SizedBox(height: 24),
-          ],
-        ),
+      body: BlocConsumer<ProjectBloc, ProjectState>(
+        listener: (context, state) {
+          if (state is ProjectCreateSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Project posted successfully'),
+                backgroundColor: Color(0xFF5B67F1),
+              ),
+            );
+            Navigator.of(context).pop();
+          } else if (state is ProjectFailure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          }
+        },
+        builder: (context, state) {
+          final isLoading = state is ProjectLoading;
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildProjectDetails(),
+                const SizedBox(height: 16),
+                _buildBudgetDuration(),
+                const SizedBox(height: 16),
+                _buildAttachments(),
+                const SizedBox(height: 16),
+                _buildPreferences(),
+                const SizedBox(height: 24),
+                _buildPostButton(isLoading),
+                const SizedBox(height: 24),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -162,17 +235,16 @@ class _PostProjectScreenState extends State<PostProjectScreen> {
               value: _selectedCategory,
               isExpanded: true,
               underline: const SizedBox(),
-              items:
-                  [
-                        'Web Development',
-                        'Mobile Development',
-                        'Design',
-                        'Backend Development',
-                      ]
-                      .map(
-                        (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
-                      )
-                      .toList(),
+              items: [
+                'Web Development',
+                'Mobile Development',
+                'Design',
+                'Backend Development',
+              ]
+                  .map(
+                    (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
+                  )
+                  .toList(),
               onChanged: (value) {
                 setState(() {
                   _selectedCategory = value!;
@@ -243,15 +315,14 @@ class _PostProjectScreenState extends State<PostProjectScreen> {
                     value: _selectedPriceType,
                     isExpanded: true,
                     underline: const SizedBox(),
-                    items:
-                        ['Fixed Price', 'Hourly Rate']
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
-                              ),
-                            )
-                            .toList(),
+                    items: ['Fixed Price', 'Hourly Rate']
+                        .map(
+                          (type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       setState(() {
                         _selectedPriceType = value!;
@@ -300,15 +371,14 @@ class _PostProjectScreenState extends State<PostProjectScreen> {
                     value: _selectedDurationType,
                     isExpanded: true,
                     underline: const SizedBox(),
-                    items:
-                        ['Days', 'Weeks', 'Months']
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
-                              ),
-                            )
-                            .toList(),
+                    items: ['Days', 'Weeks', 'Months']
+                        .map(
+                          (type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       setState(() {
                         _selectedDurationType = value!;
@@ -459,59 +529,67 @@ class _PostProjectScreenState extends State<PostProjectScreen> {
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children:
-                _preferences.entries.map((entry) {
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: Checkbox(
-                          value: entry.value,
-                          onChanged: (value) {
-                            setState(() {
-                              _preferences[entry.key] = value!;
-                            });
-                          },
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(entry.key, style: const TextStyle(fontSize: 14)),
-                      const SizedBox(width: 12),
-                    ],
-                  );
-                }).toList(),
+            children: _preferences.entries.map((entry) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: Checkbox(
+                      value: entry.value,
+                      onChanged: (value) {
+                        setState(() {
+                          _preferences[entry.key] = value!;
+                        });
+                      },
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(entry.key, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 12),
+                ],
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPostButton() {
+  Widget _buildPostButton(bool isLoading) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: SizedBox(
         width: double.infinity,
         height: 50,
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: isLoading ? null : _onPostProjectPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.indigo,
+            disabledBackgroundColor: Colors.indigo.withOpacity(0.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          child: const Text(
-            'Post Project',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
+          child: isLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : const Text(
+                  'Post Project',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ),
     );

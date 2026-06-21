@@ -1,7 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:super_project/View/ClientScreens/ClientProfile.dart';
 import 'package:super_project/View/ClientScreens/ViewBids.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
+import 'package:super_project/model/projectModel.dart';
+import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
+import 'package:super_project/viewmodel/Events/projectEvent.dart';
+import 'package:super_project/viewmodel/States/projectState.dart';
 
 import 'PostProject.dart';
 
@@ -14,6 +20,34 @@ class ClientDashboardPage extends StatefulWidget {
 
 class _ClientDashboardPage extends State<ClientDashboardPage> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start listening to this client's own projects as soon as the
+    // dashboard opens. The Bloc keeps emitting new states automatically
+    // whenever Firestore data changes — no manual refresh needed.
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      context.read<ProjectBloc>().add(LoadProjectsRequested(currentUser.uid));
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'open':
+      case 'receiving bids':
+        return Colors.pink;
+      case 'active':
+        return const Color(0xFF00BFA5);
+      case 'completed':
+        return const Color(0xFF5B67F1);
+      case 'closed':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,61 +98,63 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
                 radius: 18,
                 backgroundColor: Colors.grey[300],
                 backgroundImage: const AssetImage("assets/AppLogo1.png"),
-                // backgroundImage: const AssetImage("assets/MyImage.jpg"),
               ),
             ),
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          ProjectCard(
-            title: 'Develop a Campus Navigation App',
-            category: 'Mobile App Development',
-            budget: '₹15,000',
-            duration: '30 days',
-            status: 'Receiving Bids',
-            statusColor: Colors.pink,
-          ),
-          SizedBox(height: 16),
-          ProjectCard(
-            title: 'Design Marketing Collateral for Tech Fest',
-            category: 'Graphic Design',
-            budget: '₹8,000',
-            duration: '15 days',
-            status: 'Active',
-            statusColor: Color(0xFF00BFA5),
-          ),
-          SizedBox(height: 16),
-          ProjectCard(
-            title: 'Content Writing for University Blog',
-            category: 'Content Writing',
-            budget: '₹12,000',
-            duration: '20 days',
-            status: 'Completed',
-            statusColor: Color(0xFF5B67F1),
-          ),
-          SizedBox(height: 16),
-          ProjectCard(
-            title: 'Data Entry and Analysis for Research Project',
-            category: 'Data Science',
-            budget: '₹7,000',
-            duration: '10 days',
-            status: 'Active',
-            statusColor: Color(0xFF00BFA5),
-          ),
-          SizedBox(height: 16),
-          ProjectCard(
-            title: 'Website Redesign for Student Club',
-            category: 'Web Development',
-            budget: '₹20,000',
-            duration: '45 days',
-            status: 'Closed',
-            statusColor: Colors.red,
-          ),
-          SizedBox(height: 80),
-        ],
+      body: BlocBuilder<ProjectBloc, ProjectState>(
+        builder: (context, state) {
+          if (state is ProjectLoading || state is ProjectInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is ProjectFailure) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  state.message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            );
+          }
+
+          final projects =
+              state is ProjectLoadSuccess ? state.projects : <ProjectModel>[];
+
+          if (projects.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  "You haven't posted any projects yet.\nTap + to post your first project.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: projects.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final project = projects[index];
+              return ProjectCard(
+                title: project.title,
+                category: project.category,
+                budget: '₹${project.budget.toStringAsFixed(0)}',
+                duration: project.duration,
+                status: project.status,
+                statusColor: _statusColor(project.status),
+              );
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -129,12 +165,6 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
               },
             ),
           );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Create new project'),
-              backgroundColor: Color(0xFF5B67F1),
-            ),
-          );
         },
         backgroundColor: const Color(0xFF5B67F1),
         child: const Icon(Icons.add, size: 28),
@@ -142,31 +172,6 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          // if (_selectedIndex == 0) {
-          //   Navigator.of(context).push(
-          //     MaterialPageRoute(
-          //       builder: (context) {
-          //         return ClientDashboardPage();
-          //       },
-          //     ),
-          //   );
-          // } else if (_selectedIndex == 1) {
-          //   Navigator.of(context).push(
-          //     MaterialPageRoute(
-          //       builder: (context) {
-          //         return ClientDashboardPage();
-          //       },
-          //     ),
-          //   );
-          // } else if (_selectedIndex == 2) {
-          //   //   Navigator.of(context).push(
-          //   //     MaterialPageRoute(
-          //   //       builder: (context) {
-          //   //         // return ClientPr();
-          //   //       },
-          //   //     ),
-          //   //   );
-          // }
           setState(() {
             _selectedIndex = index;
           });
@@ -239,7 +244,6 @@ class ProjectCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and Status Badge
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -278,7 +282,6 @@ class ProjectCard extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // Category
           Text(
             category,
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -286,7 +289,6 @@ class ProjectCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Budget
           Row(
             children: [
               Icon(Icons.currency_rupee, size: 14, color: Colors.grey[700]),
@@ -304,7 +306,6 @@ class ProjectCard extends StatelessWidget {
 
           const SizedBox(height: 6),
 
-          // Duration
           Row(
             children: [
               Icon(Icons.schedule, size: 14, color: Colors.grey[700]),
@@ -318,7 +319,6 @@ class ProjectCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Action Buttons
           Row(
             children: [
               Expanded(
@@ -329,12 +329,6 @@ class ProjectCard extends StatelessWidget {
                         builder: (context) {
                           return ViewBidsPage();
                         },
-                      ),
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('View Bids for: $title'),
-                        backgroundColor: const Color(0xFF5B67F1),
                       ),
                     );
                   },
