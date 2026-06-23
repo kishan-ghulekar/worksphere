@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:super_project/model/projectModel.dart';
 import 'package:super_project/model/userModel.dart';
+import 'package:super_project/viewmodel/States/projectState.dart';
 
 
 abstract class AuthState extends Equatable {
@@ -36,3 +38,11 @@ class AuthFailure extends AuthState {
 /// No user is signed in — shown after logout or on a fresh app start
 /// with no existing session.
 class AuthLoggedOut extends AuthState {}
+// Add this to your existing states file
+class AllProjectsLoadSuccess extends ProjectState {
+  final List<ProjectModel> projects;
+  const AllProjectsLoadSuccess(this.projects);
+
+  @override
+  List<Object?> get props => [projects];
+}

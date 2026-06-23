@@ -47,3 +47,10 @@ class ProjectsStreamUpdated extends ProjectEvent {
   @override
   List<Object?> get props => [projects];
 }
+// Add this to your existing events file
+class LoadAllProjectsRequested extends ProjectEvent {
+  const LoadAllProjectsRequested();
+
+  @override
+  List<Object?> get props => [];
+}

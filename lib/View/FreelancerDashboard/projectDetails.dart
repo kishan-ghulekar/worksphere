@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:super_project/View/FreelancerDashboard/bidSubmissionPage.dart';
+import 'package:super_project/model/projectModel.dart';
 
 class ProjectDetailsPage extends StatelessWidget {
-  const ProjectDetailsPage({super.key});
+  final ProjectModel project;
+
+  const ProjectDetailsPage({super.key, required this.project});
 
   @override
   Widget build(BuildContext context) {
+    final formattedDate = DateFormat('dd MMM yyyy').format(project.createdAt);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -40,9 +47,9 @@ class ProjectDetailsPage extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Job Title
-                const Text(
-                  'Looking for a Creative UI/UX Designer for WorkSphere App',
-                  style: TextStyle(
+                Text(
+                  project.title,
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
@@ -52,7 +59,7 @@ class ProjectDetailsPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // Company Name
+                // Category chip
                 Row(
                   children: [
                     Container(
@@ -63,15 +70,15 @@ class ProjectDetailsPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Icon(
-                        Icons.business,
+                        Icons.category_outlined,
                         size: 18,
                         color: Colors.grey[600],
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Text(
-                      'CampusGigs Inc.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    Text(
+                      project.category,
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -90,9 +97,9 @@ class ProjectDetailsPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                const Text(
-                  'CampusGigs is developing a new mobile-first freelancing platform designed to connect students with project opportunities. We require an experienced UI/UX designer to craft an intuitive, visually appealing, and highly engaging user interface for our platform. The ideal candidate should specialize in have a strong portfolio demonstrating mobile app design expertise, a keen eye for modern aesthetics, and a solid understanding of user experience design principles. You will work closely with our product and development teams to translate wireframes and user stories into pixel-perfect designs. The project involves designing several key screens, including dashboards, project listings, bidding flows, and user profiles. We are looking for someone with a vibrant, professional aesthetic are',
-                  style: TextStyle(
+                Text(
+                  project.description,
+                  style: const TextStyle(
                     fontSize: 13,
                     color: Colors.grey,
                     height: 1.6,
@@ -113,7 +120,6 @@ class ProjectDetailsPage extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Budget and Duration
                 Row(
                   children: [
                     const Icon(
@@ -121,9 +127,9 @@ class ProjectDetailsPage extends StatelessWidget {
                       size: 16,
                       color: Colors.black,
                     ),
-                    const Text(
-                      '1,000 - ₹8,000',
-                      style: TextStyle(
+                    Text(
+                      '${project.budget.toStringAsFixed(0)}',
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
@@ -147,9 +153,9 @@ class ProjectDetailsPage extends StatelessWidget {
                     const SizedBox(width: 20),
                     const Icon(Icons.schedule, size: 16, color: Colors.black),
                     const SizedBox(width: 4),
-                    const Text(
-                      '2 Weeks (Flexible)',
-                      style: TextStyle(
+                    Text(
+                      project.duration,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
@@ -160,61 +166,53 @@ class ProjectDetailsPage extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Tags
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                // Status + Date
+                Row(
                   children: [
-                    _buildTag('UI/UX Design', Colors.pink),
-                    _buildTag('Figma', Colors.purple),
-                    _buildTag('Mobile App', Colors.blue),
-                    _buildTag('Freelancing', Colors.orange),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        project.status,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 13,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Posted $formattedDate',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    ),
                   ],
                 ),
 
                 const SizedBox(height: 24),
 
-                // Attachments
-                const Text(
-                  'Attachments',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                _buildAttachment(
-                  'CampusGigs_Wireframes.pdf',
-                  '1.2 MB',
-                  Icons.picture_as_pdf,
-                ),
-                _buildAttachment(
-                  'Brand_Guidelines.zip',
-                  '10 MB',
-                  Icons.folder_zip,
-                ),
-                _buildAttachment(
-                  'User_Flows.docx',
-                  '1.8 MB',
-                  Icons.description,
+                // Category tag
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildTag(project.category, const Color(0xFF5B67F1)),
+                  ],
                 ),
 
                 const SizedBox(height: 24),
-
-                // About the Client
-                const Text(
-                  'About the Client',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
               ],
             ),
           ),
@@ -238,7 +236,6 @@ class ProjectDetailsPage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // Save for Later Button
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {},
@@ -266,13 +263,19 @@ class ProjectDetailsPage extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // Bid Now Button
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          // ignore: inference_failure_on_instance_creation
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    BidSubmissionPage(project: project),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5B67F1),
                         foregroundColor: Colors.white,
@@ -321,45 +324,6 @@ class ProjectDetailsPage extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: color.withOpacity(0.9),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAttachment(String name, String size, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 24, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  size,
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.more_vert, size: 20, color: Colors.grey[400]),
-        ],
       ),
     );
   }

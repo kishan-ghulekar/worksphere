@@ -1,78 +1,30 @@
+// lib/View/ClientScreens/ViewBids.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:super_project/model/bidModel.dart';
+import 'package:super_project/model/projectModel.dart';
+import 'package:super_project/viewmodel/Bloc/bidBloc.dart';
+import 'package:super_project/viewmodel/Events/bidEvents.dart';
+import 'package:super_project/viewmodel/States/bidStates.dart';
 
-// Model for Freelancer
-class Freelancer {
-  final String name;
-  final String title;
-  final String imageUrl;
-  final double rating;
-  final List<String> skills;
-  final String category;
+class ViewBidsPage extends StatefulWidget {
+  final ProjectModel project;
 
-  Freelancer({
-    required this.name,
-    required this.title,
-    required this.imageUrl,
-    required this.rating,
-    required this.skills,
-    required this.category,
-  });
+  const ViewBidsPage({super.key, required this.project});
+
+  @override
+  State<ViewBidsPage> createState() => _ViewBidsPageState();
 }
 
-// View Bids Page
-class ViewBidsPage extends StatelessWidget {
-  final String projectTitle;
-
-  const ViewBidsPage({
-    super.key,
-    this.projectTitle = "Develop a Campus Event Management V",
-  });
+class _ViewBidsPageState extends State<ViewBidsPage> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<BidBloc>().add(LoadBidsForProject(widget.project.projectId));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List<Freelancer> freelancers = [
-      Freelancer(
-        name: "Ananya Sharma",
-        title: "Expert UI/UX Designer",
-        imageUrl: "assets/ananya.jpg",
-        rating: 4.9,
-        skills: ["Figma", "Sketch", "Prototyping"],
-        category: "User Research",
-      ),
-      Freelancer(
-        name: "Rahul Kumar",
-        title: "Full-Stack Web Developer",
-        imageUrl: "assets/rahul.jpg",
-        rating: 4.7,
-        skills: ["React", "Node.js", "MongoDB", "AWS"],
-        category: "Python",
-      ),
-      Freelancer(
-        name: "Priya Singh",
-        title: "Content Writer & SEO Specialist",
-        imageUrl: "assets/priya.jpg",
-        rating: 4.8,
-        skills: ["Copywriting", "SEO", "Blog Posts"],
-        category: "Editing",
-      ),
-      Freelancer(
-        name: "Vivek Gupta",
-        title: "Data Analyst & Visualization",
-        imageUrl: "assets/vivek.jpg",
-        rating: 4.8,
-        skills: ["SQL", "Python", "Tableau", "Excel"],
-        category: "Statistics",
-      ),
-      Freelancer(
-        name: "Shreya Das",
-        title: "Social Media Marketing",
-        imageUrl: "assets/shreya.jpg",
-        rating: 4.9,
-        skills: ["Instagram", "Facebook", "Content Strategy"],
-        category: "Analytics",
-      ),
-    ];
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -82,32 +34,75 @@ class ViewBidsPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          "View Bids",
-          style: TextStyle(
+        title: Text(
+          widget.project.title,
+          style: const TextStyle(
             color: Colors.black,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
         centerTitle: true,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: freelancers.length,
-        itemBuilder: (context, index) {
-          return FreelancerCard(freelancer: freelancers[index]);
+      body: BlocBuilder<BidBloc, BidState>(
+        builder: (context, state) {
+          if (state is BidLoading || state is BidInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is BidFailure) {
+            return Center(
+              child: Text(state.message,
+                  style: const TextStyle(color: Colors.red)),
+            );
+          }
+
+          final bids =
+              state is BidsForProjectLoaded ? state.bids : <BidModel>[];
+
+          if (bids.isEmpty) {
+            return const Center(
+              child: Text(
+                'No bids yet.\nFreelancers will appear here once they submit proposals.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: bids.length,
+            itemBuilder: (context, index) {
+              return BidCard(
+                bid: bids[index],
+                project: widget.project,
+              );
+            },
+          );
         },
       ),
     );
   }
 }
 
-// Freelancer Card Widget
-class FreelancerCard extends StatelessWidget {
-  final Freelancer freelancer;
+class BidCard extends StatelessWidget {
+  final BidModel bid;
+  final ProjectModel project;
 
-  const FreelancerCard({super.key, required this.freelancer});
+  const BidCard({super.key, required this.bid, required this.project});
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'accepted':
+        return const Color(0xFF00BFA5);
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,271 +123,198 @@ class FreelancerCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Profile Section
+          // Header
           Row(
             children: [
-              // Profile Image
               CircleAvatar(
                 radius: 24,
-                backgroundColor: Colors.blue[100],
+                backgroundColor: const Color(0xFF5B67F1).withOpacity(0.15),
                 child: Text(
-                  freelancer.name[0],
-                  style: TextStyle(
+                  bid.freelancerName.isNotEmpty
+                      ? bid.freelancerName[0].toUpperCase()
+                      : 'F',
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue[700],
+                    color: Color(0xFF5B67F1),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              // Name and Title
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      freelancer.name,
+                      bid.freelancerName,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 2),
                     Text(
-                      freelancer.title,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      'Submitted ${_timeAgo(bid.createdAt)}',
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
-              // Rating Badge
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF4081),
+                  color: _statusColor(bid.status).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.white, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      freelancer.rating.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  bid.status.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: _statusColor(bid.status),
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          // Skills Section
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                freelancer.skills.map((skill) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Text(
-                      skill,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  );
-                }).toList(),
-          ),
-          const SizedBox(height: 12),
-          // Category
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              freelancer.category,
-              style: TextStyle(fontSize: 11, color: Colors.grey[700]),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Action Buttons
+
+          // Bid amount and duration
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Handle hire action
-                    // // Navigator.of(context).push(
-                    // //   MaterialPageRoute(
-                    // //     builder: (context) {
-                    // //       return HireConfirmationPage(
-                    // //         project: Project(
-                    // //           title: "",
-                    // //           duration: "",
-                    // //           budget: 0,
-                    // //         ),
-                    // //         freelancer: FreelancerDetail(
-                    // //           name: "",
-                    // //           imageUrl: "",
-                    // //           rating: 0,
-                    // //           reviewCount: 0,
-                    // //           isVerified: true,
-                    // //         ),
-                    // //       );
-                    // //     },
-                    // //   ),
-                    // );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Hiring ${freelancer.name}...'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    "Hire",
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
+              _infoChip(Icons.currency_rupee,
+                  '₹${bid.bidAmount.toStringAsFixed(0)}'),
               const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    // Handle chat action
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Opening chat with ${freelancer.name}...',
-                        ),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                  label: const Text(
-                    "Chat",
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF6366F1),
-                    side: const BorderSide(color: Color(0xFF6366F1)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
+              _infoChip(Icons.schedule, bid.estimatedDuration),
             ],
           ),
+          const SizedBox(height: 12),
+
+          // Cover Letter
+          Text(
+            'Cover Letter',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            bid.coverLetter,
+            style: TextStyle(
+                fontSize: 13, color: Colors.grey[700], height: 1.5),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 16),
+
+          // Action Buttons — only show Hire if still pending
+          if (bid.status == 'pending')
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Hire Freelancer'),
+                          content: Text(
+                            'Are you sure you want to hire ${bid.freelancerName}? All other bids will be rejected.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                context.read<BidBloc>().add(
+                                      AcceptBidRequested(
+                                        bidId: bid.bidId,
+                                        projectId: project.projectId,
+                                      ),
+                                    );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5B67F1),
+                              ),
+                              child: const Text('Hire',
+                                  style:
+                                      TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5B67F1),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Hire',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                    label: const Text('Chat',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF5B67F1),
+                      side: const BorderSide(color: Color(0xFF5B67F1)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
   }
-}
 
-// Example usage in your project list screen
-class ProjectCard extends StatelessWidget {
-  final String title;
-  final String category;
-  final String budget;
-  final String duration;
-
-  const ProjectCard({
-    super.key,
-    required this.title,
-    required this.category,
-    required this.budget,
-    required this.duration,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _infoChip(IconData icon, String label) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            category,
-            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(Icons.attach_money, size: 16, color: Colors.grey[600]),
-              Text(
-                "Budget: $budget",
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const SizedBox(width: 16),
-              Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-              Text(
-                "Duration: $duration",
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ViewBidsPage(projectTitle: ""),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6366F1),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 40),
-            ),
-            child: const Text("View Bids"),
-          ),
+          Icon(icon, size: 14, color: Colors.grey[700]),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700])),
         ],
       ),
     );
+  }
+
+  String _timeAgo(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }

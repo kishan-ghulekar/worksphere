@@ -1,18 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:super_project/View/FreelancerDashboard/FreelancerProfile.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
-
+import 'package:super_project/model/projectModel.dart';
+import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
+import 'package:super_project/viewmodel/Events/projectEvent.dart';
+import 'package:super_project/viewmodel/States/authState.dart';
+import 'package:super_project/viewmodel/States/projectState.dart';
 import 'projectDetails.dart';
 
 class Freelancerdashboard extends StatefulWidget {
   const Freelancerdashboard({super.key});
 
   @override
-  State<Freelancerdashboard> createState() => _Freelancerdashboard();
+  State<Freelancerdashboard> createState() => _FreelancerdashboardState();
 }
 
-class _Freelancerdashboard extends State<Freelancerdashboard> {
+class _FreelancerdashboardState extends State<Freelancerdashboard> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ProjectBloc>().add(const LoadAllProjectsRequested());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,11 +51,7 @@ class _Freelancerdashboard extends State<Freelancerdashboard> {
             icon: Icon(Icons.notifications_outlined, color: Colors.grey[800]),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) {
-                    return NotificationScreen();
-                  },
-                ),
+                MaterialPageRoute(builder: (context) => NotificationScreen()),
               );
             },
           ),
@@ -51,76 +59,82 @@ class _Freelancerdashboard extends State<Freelancerdashboard> {
             icon: Icon(Icons.person, color: Colors.grey[800]),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) {
-                    return ProfileScreen();
-                  },
-                ),
+                MaterialPageRoute(builder: (context) => ProfileScreen()),
               );
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Filter Chip
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Chip(
-                  label: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Weekend-only', style: TextStyle(fontSize: 13)),
-                      SizedBox(width: 4),
-                      Icon(Icons.close, size: 16),
-                    ],
-                  ),
-                  backgroundColor: Colors.grey[100],
-                  side: BorderSide(color: Colors.grey[300]!),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-              ],
-            ),
-          ),
+      body: BlocBuilder<ProjectBloc, ProjectState>(
+        builder: (context, state) {
+          if (state is ProjectLoading || state is ProjectInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          // Job List
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: const [
-                JobCard(
-                  title: 'Social Media\nContent Creator',
-                  tag: 'Weekend Only',
-                  description:
-                      'Create engaging social media content for a local startup. Requires creativity and experience.',
-                  salary: '₹5,000 - ₹8,000',
-                  date: '28 May 2024',
+          if (state is ProjectFailure) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  state.message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
                 ),
-                SizedBox(height: 16),
-                JobCard(
-                  title: 'Data Entry &\nAnalysis',
-                  tag: 'Weekend Only',
-                  description:
-                      'Assist with data compilation and basic analysis for a market research project.',
-                  salary: '₹3,000 - ₹4,500',
-                  date: '01 June 2024',
+              ),
+            );
+          }
+
+          final projects = state is AllProjectsLoadSuccess
+              ? state.projects
+              : <ProjectModel>[];
+
+          if (projects.isEmpty) {
+            return const Center(
+              child: Text(
+                'No open projects available right now.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              // Filter chip row — keep your existing UI
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-                SizedBox(height: 16),
-                JobCard(
-                  title: 'Video Editor for\nShort Films',
-                  tag: 'Weekend Only',
-                  description:
-                      'Edit short promotional videos for various campaigns. Experience with Adobe.',
-                  salary: '₹7,000 - ₹10,000',
-                  date: '20 June 2024',
+                child: Row(
+                  children: [
+                    Chip(
+                      label: Text(
+                        '${projects.length} Open Projects',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      backgroundColor: Colors.grey[100],
+                      side: BorderSide(color: Colors.grey[300]!),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: projects.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final project = projects[index];
+                    return JobCard(
+                      project: project,
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -128,11 +142,7 @@ class _Freelancerdashboard extends State<Freelancerdashboard> {
           setState(() {
             if (index == 2) {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) {
-                    return ProfileScreen();
-                  },
-                ),
+                MaterialPageRoute(builder: (context) => ProfileScreen()),
               );
             }
             _selectedIndex = index;
@@ -171,23 +181,15 @@ class _Freelancerdashboard extends State<Freelancerdashboard> {
 }
 
 class JobCard extends StatelessWidget {
-  final String title;
-  final String tag;
-  final String description;
-  final String salary;
-  final String date;
+  final ProjectModel project;
 
-  const JobCard({
-    super.key,
-    required this.title,
-    required this.tag,
-    required this.description,
-    required this.salary,
-    required this.date,
-  });
+  const JobCard({super.key, required this.project});
 
   @override
   Widget build(BuildContext context) {
+    final formattedDate =
+        DateFormat('dd MMM yyyy').format(project.createdAt);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -205,14 +207,13 @@ class JobCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and Tag
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Text(
-                  title,
+                  project.title,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -223,33 +224,29 @@ class JobCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                tag,
+                project.category,
                 style: TextStyle(fontSize: 11, color: Colors.grey[600]),
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
-          // Description
           Text(
-            description,
+            project.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 13,
               color: Colors.grey[600],
               height: 1.5,
             ),
           ),
-
           const SizedBox(height: 16),
-
-          // Salary and Date
           Row(
             children: [
               Icon(Icons.currency_rupee, size: 14, color: Colors.grey[700]),
               const SizedBox(width: 2),
               Text(
-                salary,
+                'Budget: ₹${project.budget.toStringAsFixed(0)}',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -257,37 +254,35 @@ class JobCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 24),
-              Icon(
-                Icons.calendar_today_outlined,
-                size: 13,
-                color: Colors.grey[700],
-              ),
+              Icon(Icons.calendar_today_outlined,
+                  size: 13, color: Colors.grey[700]),
               const SizedBox(width: 6),
               Text(
-                date,
+                formattedDate,
                 style: TextStyle(fontSize: 13, color: Colors.grey[700]),
               ),
             ],
           ),
-
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 14, color: Colors.grey[700]),
+              const SizedBox(width: 4),
+              Text(
+                'Duration: ${project.duration}',
+                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-
-          // View Details Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) {
-                      return ProjectDetailsPage();
-                    },
-                  ),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Viewing details for: $title'),
-                    backgroundColor: const Color(0xFF5B67F1),
+                    builder: (context) =>
+                        ProjectDetailsPage(project: project),
                   ),
                 );
               },

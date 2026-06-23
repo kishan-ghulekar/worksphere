@@ -45,4 +45,14 @@ class ProjectRepository {
             .map((doc) => ProjectModel.fromMap(doc.data()))
             .toList());
   }
+
+  Stream<List<ProjectModel>> streamAllProjects() {
+  return _projectsRef
+      .where('status', isEqualTo: 'Open')
+      .orderBy('createdAt', descending: true)
+      .snapshots()
+      .map((snapshot) => snapshot.docs
+          .map((doc) => ProjectModel.fromMap(doc.data()))
+          .toList());
+}
 }

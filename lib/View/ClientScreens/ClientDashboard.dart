@@ -8,6 +8,7 @@ import 'package:super_project/model/projectModel.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
 import 'package:super_project/viewmodel/Events/projectEvent.dart';
 import 'package:super_project/viewmodel/States/projectState.dart';
+import 'package:super_project/model/projectModel.dart';
 
 import 'PostProject.dart';
 
@@ -103,7 +104,17 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
           ),
         ],
       ),
-      body: BlocBuilder<ProjectBloc, ProjectState>(
+      body: BlocConsumer<ProjectBloc, ProjectState>(
+        listener: (context, state) {
+          if (state is ProjectCreateSuccess) {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser != null) {
+              context.read<ProjectBloc>().add(
+                LoadProjectsRequested(currentUser.uid),
+              );
+            }
+          }
+        },
         builder: (context, state) {
           if (state is ProjectLoading || state is ProjectInitial) {
             return const Center(child: CircularProgressIndicator());
@@ -145,6 +156,7 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
             itemBuilder: (context, index) {
               final project = projects[index];
               return ProjectCard(
+                project: project,
                 title: project.title,
                 category: project.category,
                 budget: '₹${project.budget.toStringAsFixed(0)}',
@@ -209,6 +221,8 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
 }
 
 class ProjectCard extends StatelessWidget {
+  final ProjectModel project;
+
   final String title;
   final String category;
   final String budget;
@@ -218,6 +232,7 @@ class ProjectCard extends StatelessWidget {
 
   const ProjectCard({
     super.key,
+    required this.project,
     required this.title,
     required this.category,
     required this.budget,
@@ -327,7 +342,7 @@ class ProjectCard extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) {
-                          return ViewBidsPage();
+                          return ViewBidsPage(project: project);
                         },
                       ),
                     );
