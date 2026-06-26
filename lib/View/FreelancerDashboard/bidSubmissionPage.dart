@@ -33,14 +33,17 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
       return;
     }
 
-    context.read<BidBloc>().add(SubmitBidRequested(
-          projectId: widget.project.projectId,
-          freelancerId: currentUser!.uid,
-          freelancerName: currentUser.displayName ?? 'Freelancer',
-          bidAmount: amount,
-          estimatedDuration: duration,
-          coverLetter: coverLetter,
-        ));
+    context.read<BidBloc>().add(
+      SubmitBidRequested(
+        projectId: widget.project.projectId,
+        projectTitle: widget.project.title, // ADD THIS
+        freelancerId: currentUser!.uid,
+        freelancerName: currentUser.displayName ?? 'Freelancer',
+        bidAmount: amount,
+        estimatedDuration: duration,
+        coverLetter: coverLetter,
+      ),
+    );
   }
 
   @override
@@ -57,9 +60,10 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
         title: const Text(
           'Submit Bid',
           style: TextStyle(
-              color: Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.w600),
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         centerTitle: true,
       ),
@@ -75,9 +79,9 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
             Navigator.pop(context); // back to project details
           }
           if (state is BidFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -96,8 +100,11 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.work_outline,
-                          color: Color(0xFF5B67F1), size: 20),
+                      const Icon(
+                        Icons.work_outline,
+                        color: Color(0xFF5B67F1),
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -115,9 +122,10 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
                 const SizedBox(height: 24),
 
                 // Bid Amount
-                const Text('Your Bid Amount (₹)',
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Your Bid Amount (₹)',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _bidAmountController,
@@ -141,9 +149,10 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
                 const SizedBox(height: 20),
 
                 // Estimated Duration
-                const Text('Estimated Duration',
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Estimated Duration',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _durationController,
@@ -159,16 +168,16 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey[300]!),
                     ),
-                    prefixIcon:
-                        const Icon(Icons.schedule_outlined, size: 18),
+                    prefixIcon: const Icon(Icons.schedule_outlined, size: 18),
                   ),
                 ),
                 const SizedBox(height: 20),
 
                 // Cover Letter
-                const Text('Cover Letter',
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Cover Letter',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _coverLetterController,
@@ -198,30 +207,32 @@ class _BidSubmissionPageState extends State<BidSubmissionPage> {
                     onPressed: isLoading ? null : _onSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5B67F1),
-                      disabledBackgroundColor:
-                          const Color(0xFF5B67F1).withOpacity(0.5),
+                      disabledBackgroundColor: const Color(
+                        0xFF5B67F1,
+                      ).withOpacity(0.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 0,
                     ),
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
+                    child:
+                        isLoading
+                            ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                            : const Text(
+                              'Submit Bid',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
-                          )
-                        : const Text(
-                            'Submit Bid',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
                   ),
                 ),
               ],

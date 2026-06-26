@@ -12,6 +12,7 @@ class BidRepository {
   Future<void> submitBid({
     required String projectId,
     required String freelancerId,
+    required String projectTitle,
     required String freelancerName,
     required double bidAmount,
     required String estimatedDuration,
@@ -21,6 +22,7 @@ class BidRepository {
     final bid = BidModel(
       bidId: docRef.id,
       projectId: projectId,
+      projectTitle: projectTitle,
       freelancerId: freelancerId,
       freelancerName: freelancerName,
       bidAmount: bidAmount,
@@ -81,4 +83,19 @@ class BidRepository {
 
     await batch.commit();
   }
+  // Freelancer withdraws their bid
+Future<void> withdrawBid(String bidId) async {
+  await _bidsRef.doc(bidId).update({'status': 'withdrawn'});
+}
+
+// Stream bids for a specific freelancer (already have this — no change needed)
+// Stream<List<BidModel>> streamMyBids(String freelancerId) {
+//   return _bidsRef
+//       .where('freelancerId', isEqualTo: freelancerId)
+//       .orderBy('createdAt', descending: true)
+//       .snapshots()
+//       .map((snapshot) => snapshot.docs
+//           .map((doc) => BidModel.fromMap(doc.data()))
+//           .toList());
+// }
 }

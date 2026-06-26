@@ -1,12 +1,18 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:super_project/View/FreelancerDashboard/FreelancerProfile.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
+import 'package:super_project/View/FreelancerDashboard/myApplicationPage.dart';
 import 'package:super_project/model/projectModel.dart';
+import 'package:super_project/viewmodel/Bloc/freelancerProfileBloc.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
+import 'package:super_project/viewmodel/Events/freelancerProfileEvent.dart';
 import 'package:super_project/viewmodel/Events/projectEvent.dart';
 import 'package:super_project/viewmodel/States/authState.dart';
+import 'package:super_project/viewmodel/States/freelancerProfileState.dart';
 import 'package:super_project/viewmodel/States/projectState.dart';
 import 'projectDetails.dart';
 
@@ -24,6 +30,10 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
   void initState() {
     super.initState();
     context.read<ProjectBloc>().add(const LoadAllProjectsRequested());
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      context.read<FreelancerProfileBloc>().add(LoadFreelancerProfile(uid));
+    }
   }
 
   @override
@@ -55,11 +65,45 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
               );
             },
           ),
-          IconButton(
-            icon: Icon(Icons.person, color: Colors.grey[800]),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => ProfileScreen()),
+          BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
+            builder: (context, state) {
+              String imageUrl = '';
+              String name = 'F';
+
+              if (state is FreelancerProfileLoaded) {
+                imageUrl = state.freelancer.profileImageUrl;
+                if (state.freelancer.name.isNotEmpty) {
+                  name = state.freelancer.name[0].toUpperCase();
+                }
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage:
+                        imageUrl.isNotEmpty
+                            ? CachedNetworkImageProvider(imageUrl)
+                            : null,
+                    child:
+                        imageUrl.isEmpty
+                            ? Text(
+                              name,
+                              style: const TextStyle(
+                                color: Color(0xFF6C5CE7),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                            : null,
+                  ),
+                ),
               );
             },
           ),
@@ -84,9 +128,10 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
             );
           }
 
-          final projects = state is AllProjectsLoadSuccess
-              ? state.projects
-              : <ProjectModel>[];
+          final projects =
+              state is AllProjectsLoadSuccess
+                  ? state.projects
+                  : <ProjectModel>[];
 
           if (projects.isEmpty) {
             return const Center(
@@ -126,9 +171,7 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
                     final project = projects[index];
-                    return JobCard(
-                      project: project,
-                    );
+                    return JobCard(project: project);
                   },
                 ),
               ),
@@ -140,14 +183,62 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
-            if (index == 2) {
+            if (index == 3) {
+              BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
+                builder: (context, state) {
+                  final imageUrl =
+                      state is FreelancerProfileLoaded
+                          ? state.freelancer.profileImageUrl
+                          : '';
+                  final name =
+                      state is FreelancerProfileLoaded
+                          ? state.freelancer.name
+                          : '';
+                  return GestureDetector(
+                    onTap:
+                        () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileScreen(),
+                          ),
+                        ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: const Color(
+                          0xFF6C5CE7,
+                        ).withOpacity(0.15),
+                        backgroundImage:
+                            imageUrl.isNotEmpty
+                                ? CachedNetworkImageProvider(imageUrl)
+                                : null,
+                        child:
+                            imageUrl.isEmpty
+                                ? Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : 'F',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF6C5CE7),
+                                  ),
+                                )
+                                : null,
+                      ),
+                    ),
+                  );
+                },
+              );
+            } else if (index == 1) {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => ProfileScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const MyApplicationsPage(),
+                ),
               );
             }
             _selectedIndex = index;
           });
         },
+
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF5B67F1),
         unselectedItemColor: Colors.grey,
@@ -165,14 +256,14 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
             label: 'Projects',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.account_balance_wallet_outlined),
             activeIcon: Icon(Icons.account_balance_wallet),
             label: 'Earnings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),
@@ -187,8 +278,7 @@ class JobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate =
-        DateFormat('dd MMM yyyy').format(project.createdAt);
+    final formattedDate = DateFormat('dd MMM yyyy').format(project.createdAt);
 
     return Container(
       decoration: BoxDecoration(
@@ -254,8 +344,11 @@ class JobCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 24),
-              Icon(Icons.calendar_today_outlined,
-                  size: 13, color: Colors.grey[700]),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 13,
+                color: Colors.grey[700],
+              ),
               const SizedBox(width: 6),
               Text(
                 formattedDate,
@@ -281,8 +374,7 @@ class JobCard extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) =>
-                        ProjectDetailsPage(project: project),
+                    builder: (context) => ProjectDetailsPage(project: project),
                   ),
                 );
               },

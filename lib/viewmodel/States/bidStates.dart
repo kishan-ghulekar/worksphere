@@ -40,3 +40,20 @@ class MyBidsLoaded extends BidState {
   @override
   List<Object?> get props => [bids];
 }
+
+class BidWithdrawSuccess extends BidState {}
+
+class ApplicationsLoaded extends BidState {
+  final List<BidModel> allBids;
+  final List<BidModel> filteredBids;
+  final String activeFilter;
+
+  const ApplicationsLoaded({
+    required this.allBids,
+    required this.filteredBids,
+    required this.activeFilter,
+  });
+
+  @override
+  List<Object?> get props => [allBids, filteredBids, activeFilter];
+}
