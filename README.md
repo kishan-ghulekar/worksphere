@@ -204,4 +204,4 @@ lib/
 
 **Your Name**
 Flutter Developer | Firebase | BLoC
-[GitHub](https://github.com/yourusername) • [LinkedIn](https://linkedin.com/in/yourusername)
+[GitHub](https://github.com/kishan-ghulekar) • [LinkedIn](https://www.linkedin.com/in/kishan-ghulekar1)
