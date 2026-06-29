@@ -15,6 +15,8 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     on<CreateProjectRequested>(_onCreateProjectRequested);
     on<LoadProjectsRequested>(_onLoadProjectsRequested);
     on<LoadAllProjectsRequested>(_onLoadAllProjectsRequested);
+    on<DeleteProjectRequest>(_onDeleteProject);
+    on<UpdateProjectRequested>(_onUpdateProject);
   }
 
   Future<void> _onLoadProjectsRequested(
@@ -86,4 +88,50 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     _projectsSubscription?.cancel();
     return super.close();
   }
+
+  Future<void> _onDeleteProject(
+    DeleteProjectRequest event,
+    Emitter<ProjectState> emit,
+  ) async {
+    try {
+      await projectRepository.deleteProject(event.projectId);
+      emit(ProjectDeleteSuccess());
+
+      if (_currentClientId != null) {
+        await emit.forEach<List<ProjectModel>>(
+          ProjectRepository().streamProjects(_currentClientId!),
+          onData: (projects) => ProjectLoadSuccess(projects),
+          onError: (error, _) => ProjectFailure("Failed to load: $error"),
+        );
+      }
+    } catch (e) {
+      emit(ProjectFailure("Failed to delete: $e"));
+    }
+  }
+
+  Future<void> _onUpdateProject(
+  UpdateProjectRequested event,
+  Emitter<ProjectState> emit,
+) async {
+  try {
+    await projectRepository.updateProject(
+      projectId: event.projectId,
+      title: event.title,
+      description: event.description,
+      category: event.category,
+      budget: event.budget,
+      duration: event.duration,
+    );
+    emit(ProjectUpdateSuccess());
+    if (_currentClientId != null) {
+      await emit.forEach<List<ProjectModel>>(
+        projectRepository.streamProjects(_currentClientId!),
+        onData: (projects) => ProjectLoadSuccess(projects),
+        onError: (error, _) => ProjectFailure("Failed to load: $error"),
+      );
+    }
+  } catch (e) {
+    emit(ProjectFailure("Failed to update: $e"));
+  }
+}
 }

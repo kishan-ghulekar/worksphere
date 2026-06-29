@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:super_project/View/FreelancerDashboard/FreelancerProfile.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
+import 'package:super_project/View/FreelancerDashboard/drawerPage.dart';
 import 'package:super_project/View/FreelancerDashboard/myApplicationPage.dart';
 import 'package:super_project/model/projectModel.dart';
 import 'package:super_project/viewmodel/Bloc/freelancerProfileBloc.dart';
@@ -14,6 +15,7 @@ import 'package:super_project/viewmodel/Events/projectEvent.dart';
 import 'package:super_project/viewmodel/States/authState.dart';
 import 'package:super_project/viewmodel/States/freelancerProfileState.dart';
 import 'package:super_project/viewmodel/States/projectState.dart';
+
 import 'projectDetails.dart';
 
 class Freelancerdashboard extends StatefulWidget {
@@ -39,13 +41,18 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const FreelancerDrawer(),
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.grey[800]),
-          onPressed: () {},
+        leading: Builder(
+          builder:
+              (context) => IconButton(
+                icon: Icon(Icons.menu, color: Colors.grey[800]),
+                onPressed:
+                    () => Scaffold.of(context).openDrawer(), // ← OPEN DRAWER
+              ),
         ),
         title: const Text(
           'WorkSphere',
@@ -62,48 +69,6 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => NotificationScreen()),
-              );
-            },
-          ),
-          BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
-            builder: (context, state) {
-              String imageUrl = '';
-              String name = 'F';
-
-              if (state is FreelancerProfileLoaded) {
-                imageUrl = state.freelancer.profileImageUrl;
-                if (state.freelancer.name.isNotEmpty) {
-                  name = state.freelancer.name[0].toUpperCase();
-                }
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                    );
-                  },
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey.shade200,
-                    backgroundImage:
-                        imageUrl.isNotEmpty
-                            ? CachedNetworkImageProvider(imageUrl)
-                            : null,
-                    child:
-                        imageUrl.isEmpty
-                            ? Text(
-                              name,
-                              style: const TextStyle(
-                                color: Color(0xFF6C5CE7),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                            : null,
-                  ),
-                ),
               );
             },
           ),
@@ -182,88 +147,112 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          setState(() {
-            if (index == 3) {
-              BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
-                builder: (context, state) {
-                  final imageUrl =
-                      state is FreelancerProfileLoaded
-                          ? state.freelancer.profileImageUrl
-                          : '';
-                  final name =
-                      state is FreelancerProfileLoaded
-                          ? state.freelancer.name
-                          : '';
-                  return GestureDetector(
-                    onTap:
-                        () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ProfileScreen(),
-                          ),
-                        ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: const Color(
-                          0xFF6C5CE7,
-                        ).withOpacity(0.15),
-                        backgroundImage:
-                            imageUrl.isNotEmpty
-                                ? CachedNetworkImageProvider(imageUrl)
-                                : null,
-                        child:
-                            imageUrl.isEmpty
-                                ? Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : 'F',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF6C5CE7),
-                                  ),
-                                )
-                                : null,
-                      ),
-                    ),
-                  );
-                },
-              );
-            } else if (index == 1) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const MyApplicationsPage(),
-                ),
-              );
-            }
-            _selectedIndex = index;
-          });
+          setState(() => _selectedIndex = index);
+          if (index == 1) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const MyApplicationsPage(),
+              ),
+            );
+          } else if (index == 3) {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+          }
         },
-
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF5B67F1),
         unselectedItemColor: Colors.grey,
         selectedFontSize: 12,
         unselectedFontSize: 12,
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.work_outline),
             activeIcon: Icon(Icons.work),
             label: 'Projects',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.account_balance_wallet_outlined),
             activeIcon: Icon(Icons.account_balance_wallet),
             label: 'Earnings',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
             label: 'Profile',
+            icon: BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
+              builder: (context, state) {
+                final imageUrl =
+                    state is FreelancerProfileLoaded
+                        ? state.freelancer.profileImageUrl
+                        : '';
+                final name =
+                    state is FreelancerProfileLoaded
+                        ? state.freelancer.name
+                        : '';
+                if (imageUrl.isNotEmpty) {
+                  return CircleAvatar(
+                    radius: 13,
+                    backgroundImage: CachedNetworkImageProvider(imageUrl),
+                  );
+                }
+                return CircleAvatar(
+                  radius: 13,
+                  backgroundColor: const Color(0xFF6C5CE7).withOpacity(0.15),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'F',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6C5CE7),
+                    ),
+                  ),
+                );
+              },
+            ),
+            activeIcon:
+                BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
+                  builder: (context, state) {
+                    final imageUrl =
+                        state is FreelancerProfileLoaded
+                            ? state.freelancer.profileImageUrl
+                            : '';
+                    final name =
+                        state is FreelancerProfileLoaded
+                            ? state.freelancer.name
+                            : '';
+                    if (imageUrl.isNotEmpty) {
+                      return CircleAvatar(
+                        radius: 15,
+                        backgroundImage: CachedNetworkImageProvider(imageUrl),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF5B67F1),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return CircleAvatar(
+                      radius: 15,
+                      backgroundColor: const Color(0xFF6C5CE7).withOpacity(0.3),
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'F',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF6C5CE7),
+                        ),
+                      ),
+                    );
+                  },
+                ),
           ),
         ],
       ),

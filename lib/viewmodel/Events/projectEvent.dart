@@ -25,8 +25,14 @@ class CreateProjectRequested extends ProjectEvent {
   });
 
   @override
-  List<Object?> get props =>
-      [clientId, title, description, category, budget, duration];
+  List<Object?> get props => [
+    clientId,
+    title,
+    description,
+    category,
+    budget,
+    duration,
+  ];
 }
 
 /// Starts (or restarts) listening to this client's projects stream.
@@ -47,10 +53,40 @@ class ProjectsStreamUpdated extends ProjectEvent {
   @override
   List<Object?> get props => [projects];
 }
+
 // Add this to your existing events file
 class LoadAllProjectsRequested extends ProjectEvent {
   const LoadAllProjectsRequested();
 
   @override
   List<Object?> get props => [];
+}
+
+class DeleteProjectRequest extends ProjectEvent {
+  final String projectId;
+  const DeleteProjectRequest(this.projectId);
+
+  @override
+  List<Object?> get props => [projectId];
+}
+
+class UpdateProjectRequested extends ProjectEvent {
+  final String projectId;
+  final String title;
+  final String description;
+  final String category;
+  final double budget;
+  final String duration;
+
+  const UpdateProjectRequested({
+    required this.projectId,
+    required this.title,
+    required this.description,
+    required this.category,
+    required this.budget,
+    required this.duration,
+  });
+
+  @override
+  List<Object?> get props => [projectId, title, budget];
 }

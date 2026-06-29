@@ -32,3 +32,7 @@ class ProjectLoadSuccess extends ProjectState {
   @override
   List<Object?> get props => [projects];
 }
+
+class ProjectDeleteSuccess extends ProjectState {}
+
+class ProjectUpdateSuccess extends ProjectState {}

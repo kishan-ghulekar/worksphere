@@ -41,18 +41,45 @@ class ProjectRepository {
         .where('clientId', isEqualTo: clientId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ProjectModel.fromMap(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => ProjectModel.fromMap(doc.data()))
+                  .toList(),
+        );
   }
 
   Stream<List<ProjectModel>> streamAllProjects() {
-  return _projectsRef
-      .where('status', isEqualTo: 'Open')
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map((doc) => ProjectModel.fromMap(doc.data()))
-          .toList());
-}
+    return _projectsRef
+        .where('status', isEqualTo: 'Open')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => ProjectModel.fromMap(doc.data()))
+                  .toList(),
+        );
+  }
+
+  Future<void> deleteProject(String projectId) async {
+    await _projectsRef.doc(projectId).delete();
+  }
+
+  Future<void> updateProject({
+    required String projectId,
+    required String title,
+    required String description,
+    required String category,
+    required double budget,
+    required String duration,
+  }) async {
+    await _projectsRef.doc(projectId).update({
+      'title': title,
+      'description': description,
+      'category': category,
+      'budget': budget,
+      'duration': duration,
+    });
+  }
 }
