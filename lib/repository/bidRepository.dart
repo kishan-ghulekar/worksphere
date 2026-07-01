@@ -1,6 +1,7 @@
 // lib/repository/bidRepository.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:super_project/model/bidModel.dart';
+import 'package:super_project/model/projectModel.dart';
 
 class BidRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -40,9 +41,10 @@ class BidRepository {
         .where('projectId', isEqualTo: projectId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => BidModel.fromMap(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => BidModel.fromMap(doc.data())).toList(),
+        );
   }
 
   // Freelancer streams their own bids
@@ -51,23 +53,35 @@ class BidRepository {
         .where('freelancerId', isEqualTo: freelancerId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => BidModel.fromMap(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => BidModel.fromMap(doc.data())).toList(),
+        );
   }
 
   // Client accepts a bid
+  // In BidRepository, update acceptBid method:
   Future<void> acceptBid(String bidId, String projectId) async {
     final batch = _firestore.batch();
 
-    // Update bid status to accepted
+    // Get the bid data first
+    final bidDoc = await _bidsRef.doc(bidId).get();
+    final bid = BidModel.fromMap(bidDoc.data()!);
+
+    // Get the project data
+    final projectDoc =
+        await _firestore.collection('projects').doc(projectId).get();
+    final project = ProjectModel.fromMap(projectDoc.data()!);
+
+    // Accept this bid
     batch.update(_bidsRef.doc(bidId), {'status': 'accepted'});
 
-    // Reject all other bids for this project
-    final otherBids = await _bidsRef
-        .where('projectId', isEqualTo: projectId)
-        .where('status', isEqualTo: 'pending')
-        .get();
+    // Reject all other pending bids
+    final otherBids =
+        await _bidsRef
+            .where('projectId', isEqualTo: projectId)
+            .where('status', isEqualTo: 'pending')
+            .get();
 
     for (final doc in otherBids.docs) {
       if (doc.id != bidId) {
@@ -75,27 +89,41 @@ class BidRepository {
       }
     }
 
-    // Update project status to In Progress
-    batch.update(
-      _firestore.collection('projects').doc(projectId),
-      {'status': 'In Progress'},
-    );
+    // Update project status
+    batch.update(_firestore.collection('projects').doc(projectId), {
+      'status': 'In Progress',
+    });
+
+    // Create contract document
+    final contractRef = _firestore.collection('contracts').doc(projectId);
+
+    final defaultMilestones = [
+      {'title': 'Project Kickoff', 'isCompleted': false},
+      {'title': 'First Delivery', 'isCompleted': false},
+      {'title': 'Review & Feedback', 'isCompleted': false},
+      {'title': 'Final Delivery', 'isCompleted': false},
+    ];
+
+    batch.set(contractRef, {
+      'contractId': projectId,
+      'projectId': projectId,
+      'projectTitle': project.title,
+      'clientId': project.clientId,
+      'freelancerId': bid.freelancerId,
+      'freelancerName': bid.freelancerName,
+      'agreedAmount': bid.bidAmount,
+      'duration': bid.estimatedDuration,
+      'status': 'active',
+      'milestones': defaultMilestones,
+      'workSubmitted': false,
+      'paymentReleased': false,
+      'startDate': Timestamp.fromDate(DateTime.now()),
+    });
 
     await batch.commit();
   }
-  // Freelancer withdraws their bid
-Future<void> withdrawBid(String bidId) async {
+
+  Future<void> withdrawBid(String bidId) async {
   await _bidsRef.doc(bidId).update({'status': 'withdrawn'});
 }
-
-// Stream bids for a specific freelancer (already have this — no change needed)
-// Stream<List<BidModel>> streamMyBids(String freelancerId) {
-//   return _bidsRef
-//       .where('freelancerId', isEqualTo: freelancerId)
-//       .orderBy('createdAt', descending: true)
-//       .snapshots()
-//       .map((snapshot) => snapshot.docs
-//           .map((doc) => BidModel.fromMap(doc.data()))
-//           .toList());
-// }
 }

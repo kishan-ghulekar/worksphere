@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:super_project/View/ClientScreens/ClientProfile.dart';
 import 'package:super_project/View/ClientScreens/ViewBids.dart';
+import 'package:super_project/View/ClientScreens/contractScreen.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
 import 'package:super_project/model/projectModel.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
@@ -391,23 +392,23 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
               );
             },
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => ClientProfileScreen(),
-                  ),
-                );
-              },
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.grey[300],
-                backgroundImage: const AssetImage("assets/AppLogo1.png"),
-              ),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.only(right: 12),
+          //   child: GestureDetector(
+          //     onTap: () {
+          //       Navigator.of(context).push(
+          //         MaterialPageRoute(
+          //           builder: (context) => ClientProfileScreen(),
+          //         ),
+          //       );
+          //     },
+          //     child: CircleAvatar(
+          //       radius: 18,
+          //       backgroundColor: Colors.grey[300],
+          //       backgroundImage: const AssetImage("assets/AppLogo1.png"),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
       body: BlocConsumer<ProjectBloc, ProjectState>(
@@ -608,7 +609,28 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: (index) {
+          setState(() => _selectedIndex = index);
+          if (index == 1) {
+            Navigator.of(context).push(
+              // ignore: inference_failure_on_instance_creation
+              MaterialPageRoute(
+                builder: (context) => const ClientDashboardPage(),
+              ),
+            );
+          } else if (index == 3) {
+            Navigator.of(
+              context,
+              // ignore: inference_failure_on_instance_creation
+            ).push(
+              MaterialPageRoute(builder: (_) => const ClientProfileScreen()),
+            );
+          }else if (index == 2) {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ClientContractsPage()),
+            );
+          }
+        },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF5B67F1),
         unselectedItemColor: Colors.grey,
@@ -626,14 +648,14 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
             label: 'Projects',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.description_outlined),
             activeIcon: Icon(Icons.description),
             label: 'Contracts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),

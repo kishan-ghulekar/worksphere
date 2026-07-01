@@ -34,38 +34,42 @@ class ClientModel extends Equatable {
   });
 
   Map<String, dynamic> toMap() => {
-        'uid': uid,
-        'name': name,
-        'email': email,
-        'phone': phone,
-        'location': location,
-        'companyName': companyName,
-        'industry': industry,
-        'website': website,
-        'companySize': companySize,
-        'about': about,
-        'skills': skills,
-        'profileImageUrl': profileImageUrl,
-        'updatedAt': Timestamp.fromDate(updatedAt ?? DateTime.now()),
-      };
+    'uid': uid,
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'location': location,
+    'companyName': companyName,
+    'industry': industry,
+    'website': website,
+    'companySize': companySize,
+    'about': about,
+    'skills': skills,
+    'profileImageUrl': profileImageUrl,
+    'updatedAt': Timestamp.fromDate(updatedAt ?? DateTime.now()),
+  };
 
   factory ClientModel.fromMap(Map<String, dynamic> map) => ClientModel(
-        uid: map['uid'] as String? ?? '',
-        name: map['name'] as String? ?? '',
-        email: map['email'] as String? ?? '',
-        phone: map['phone'] as String? ?? '',
-        location: map['location'] as String? ?? '',
-        companyName: map['companyName'] as String? ?? '',
-        industry: map['industry'] as String? ?? '',
-        website: map['website'] as String? ?? '',
-        companySize: map['companySize'] as String? ?? '',
-        about: map['about'] as String? ?? '',
-        skills: List<String>.from(map['skills'] ?? []),
-        profileImageUrl: map['profileImageUrl'] as String? ?? '',
-        updatedAt: map['updatedAt'] != null
+    uid: map['uid'] as String? ?? '',
+    name: map['name'] as String? ?? '',
+    email: map['email'] as String? ?? '',
+    phone: map['phone'] as String? ?? '',
+    location: map['location'] as String? ?? '',
+    companyName: map['companyName'] as String? ?? '',
+    industry: map['industry'] as String? ?? '',
+    website: map['website'] as String? ?? '',
+    companySize: map['companySize'] as String? ?? '',
+    about: map['about'] as String? ?? '',
+    skills:
+        (map['skills'] as List<dynamic>? ?? [])
+            .map((e) => e.toString())
+            .toList(),
+    profileImageUrl: map['profileImageUrl'] as String? ?? '',
+    updatedAt:
+        map['updatedAt'] != null
             ? (map['updatedAt'] as Timestamp).toDate()
             : null,
-      );
+  );
 
   ClientModel copyWith({
     String? name,
@@ -79,22 +83,21 @@ class ClientModel extends Equatable {
     String? about,
     List<String>? skills,
     String? profileImageUrl,
-  }) =>
-      ClientModel(
-        uid: uid,
-        name: name ?? this.name,
-        email: email ?? this.email,
-        phone: phone ?? this.phone,
-        location: location ?? this.location,
-        companyName: companyName ?? this.companyName,
-        industry: industry ?? this.industry,
-        website: website ?? this.website,
-        companySize: companySize ?? this.companySize,
-        about: about ?? this.about,
-        skills: skills ?? this.skills,
-        profileImageUrl: profileImageUrl ?? this.profileImageUrl,
-        updatedAt: DateTime.now(),
-      );
+  }) => ClientModel(
+    uid: uid,
+    name: name ?? this.name,
+    email: email ?? this.email,
+    phone: phone ?? this.phone,
+    location: location ?? this.location,
+    companyName: companyName ?? this.companyName,
+    industry: industry ?? this.industry,
+    website: website ?? this.website,
+    companySize: companySize ?? this.companySize,
+    about: about ?? this.about,
+    skills: skills ?? this.skills,
+    profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+    updatedAt: DateTime.now(),
+  );
 
   @override
   List<Object?> get props => [uid, name, companyName, profileImageUrl];

@@ -6,11 +6,13 @@ import 'package:super_project/View/SplashScreen.dart';
 import 'package:super_project/repository/authRepository.dart';
 import 'package:super_project/repository/bidRepository.dart';
 import 'package:super_project/repository/clientRepository.dart';
+import 'package:super_project/repository/contractRepository.dart';
 import 'package:super_project/repository/freelancerRepository.dart';
 import 'package:super_project/repository/projectRepository.dart';
 import 'package:super_project/viewmodel/Bloc/authBloc.dart';
 import 'package:super_project/viewmodel/Bloc/bidBloc.dart';
 import 'package:super_project/viewmodel/Bloc/clientbloc.dart';
+import 'package:super_project/viewmodel/Bloc/contractBloc.dart';
 import 'package:super_project/viewmodel/Bloc/freelancerProfileBloc.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
 
@@ -41,8 +43,11 @@ class MyApp extends StatelessWidget {
           create: (context) => FreelancerProfileBloc(FreelancerRepository()),
         ),
         BlocProvider(
-  create: (context) => ClientProfileBloc(ClientRepository()),
-),
+          create: (context) => ClientProfileBloc(ClientRepository()),
+        ),
+        BlocProvider(
+          create: (context) => ContractBloc(ContractRepository()),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

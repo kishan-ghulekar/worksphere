@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:super_project/View/FreelancerDashboard/FreelancerProfile.dart';
+import 'package:super_project/View/FreelancerDashboard/contractScreen.dart';
 import 'package:super_project/View/FreelancerDashboard/myApplicationPage.dart';
 import 'package:super_project/viewmodel/Bloc/freelancerProfileBloc.dart';
 import 'package:super_project/viewmodel/States/freelancerProfileState.dart';
@@ -25,18 +26,18 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
       backgroundColor: Colors.white,
       child: BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
         builder: (context, state) {
-          final imageUrl = state is FreelancerProfileLoaded
-              ? state.freelancer.profileImageUrl
-              : '';
-          final name = state is FreelancerProfileLoaded
-              ? state.freelancer.name
-              : 'Freelancer';
-          final title = state is FreelancerProfileLoaded
-              ? state.freelancer.title
-              : '';
-          final rating = state is FreelancerProfileLoaded
-              ? state.freelancer.rating
-              : 0.0;
+          final imageUrl =
+              state is FreelancerProfileLoaded
+                  ? state.freelancer.profileImageUrl
+                  : '';
+          final name =
+              state is FreelancerProfileLoaded
+                  ? state.freelancer.name
+                  : 'Freelancer';
+          final title =
+              state is FreelancerProfileLoaded ? state.freelancer.title : '';
+          final rating =
+              state is FreelancerProfileLoaded ? state.freelancer.rating : 0.0;
 
           return Column(
             children: [
@@ -59,21 +60,23 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                         CircleAvatar(
                           radius: 32,
                           backgroundColor: Colors.white.withOpacity(0.3),
-                          backgroundImage: imageUrl.isNotEmpty
-                              ? CachedNetworkImageProvider(imageUrl)
-                              : null,
-                          child: imageUrl.isEmpty
-                              ? Text(
-                                  name.isNotEmpty
-                                      ? name[0].toUpperCase()
-                                      : 'F',
-                                  style: const TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : null,
+                          backgroundImage:
+                              imageUrl.isNotEmpty
+                                  ? CachedNetworkImageProvider(imageUrl)
+                                  : null,
+                          child:
+                              imageUrl.isEmpty
+                                  ? Text(
+                                    name.isNotEmpty
+                                        ? name[0].toUpperCase()
+                                        : 'F',
+                                    style: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                  : null,
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -104,8 +107,11 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
-                                    const Icon(Icons.star,
-                                        color: Colors.amber, size: 14),
+                                    const Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 14,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       rating.toStringAsFixed(1),
@@ -127,25 +133,31 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                     GestureDetector(
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const ProfileScreen(),
-                        ));
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileScreen(),
+                          ),
+                        );
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: Colors.white.withOpacity(0.4)),
+                            color: Colors.white.withOpacity(0.4),
+                          ),
                         ),
                         child: const Text(
                           'View Profile →',
                           style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600),
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -165,9 +177,21 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '🏠 Dashboard',
                       color: const Color(0xFF5B67F1),
                       children: [
-                        _buildSubItem(context, 'Overview', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Statistics', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Recent Activity', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Overview',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Statistics',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Recent Activity',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -178,10 +202,33 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '💼 My Projects',
                       color: Colors.orange,
                       children: [
-                        _buildSubItem(context, 'Active Projects', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Completed Projects', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Pending Projects', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Cancelled Projects', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Active Projects',
+                          onTap: () {
+                            _close(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const FreelancerContractsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Completed Projects',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Pending Projects',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Cancelled Projects',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -192,10 +239,26 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '💰 Earnings',
                       color: Colors.green,
                       children: [
-                        _buildSubItem(context, 'Total Earnings', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Withdraw Money', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Transaction History', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Razorpay Wallet', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Total Earnings',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Withdraw Money',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Transaction History',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Razorpay Wallet',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -206,15 +269,28 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '📄 Proposals',
                       color: Colors.blue,
                       children: [
-                        _buildSubItem(context, 'Sent Proposals',
-                            onTap: () {
-                              _close(context);
-                              Navigator.of(context).push(MaterialPageRoute(
+                        _buildSubItem(
+                          context,
+                          'Sent Proposals',
+                          onTap: () {
+                            _close(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
                                 builder: (_) => const MyApplicationsPage(),
-                              ));
-                            }),
-                        _buildSubItem(context, 'Proposal Status', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Saved Jobs', onTap: () => _close(context)),
+                              ),
+                            );
+                          },
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Proposal Status',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Saved Jobs',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -225,9 +301,21 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '⭐ Reviews',
                       color: Colors.amber,
                       children: [
-                        _buildSubItem(context, 'Client Reviews', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Ratings', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Testimonials', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Client Reviews',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Ratings',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Testimonials',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -238,9 +326,21 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '📅 Schedule',
                       color: Colors.teal,
                       children: [
-                        _buildSubItem(context, 'Calendar', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Meetings', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Deadlines', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Calendar',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Meetings',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Deadlines',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -251,8 +351,16 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '💬 Messages',
                       color: const Color(0xFF5B67F1),
                       children: [
-                        _buildSubItem(context, 'Chats', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Video Meetings', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Chats',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Video Meetings',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -263,15 +371,28 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '📁 Portfolio',
                       color: Colors.purple,
                       children: [
-                        _buildSubItem(context, 'Upload Portfolio',
-                            onTap: () {
-                              _close(context);
-                              Navigator.of(context).push(MaterialPageRoute(
+                        _buildSubItem(
+                          context,
+                          'Upload Portfolio',
+                          onTap: () {
+                            _close(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
                                 builder: (_) => const ProfileScreen(),
-                              ));
-                            }),
-                        _buildSubItem(context, 'Certificates', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Resume / CV', onTap: () => _close(context)),
+                              ),
+                            );
+                          },
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Certificates',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Resume / CV',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -282,10 +403,26 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '📊 Analytics',
                       color: Colors.indigo,
                       children: [
-                        _buildSubItem(context, 'Profile Views', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Proposal Success Rate', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Earnings Graph', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Job Success Score', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Profile Views',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Proposal Success Rate',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Earnings Graph',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Job Success Score',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -296,16 +433,33 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '🎯 Skills',
                       color: Colors.cyan,
                       children: [
-                        _buildSubItem(context, 'Add Skills',
-                            onTap: () {
-                              _close(context);
-                              Navigator.of(context).push(MaterialPageRoute(
+                        _buildSubItem(
+                          context,
+                          'Add Skills',
+                          onTap: () {
+                            _close(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
                                 builder: (_) => const ProfileScreen(),
-                              ));
-                            }),
-                        _buildSubItem(context, 'Experience', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Education', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Languages', onTap: () => _close(context)),
+                              ),
+                            );
+                          },
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Experience',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Education',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Languages',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -316,8 +470,16 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '🔖 Bookmarks',
                       color: Colors.pink,
                       children: [
-                        _buildSubItem(context, 'Saved Jobs', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Favourite Clients', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Saved Jobs',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Favourite Clients',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -328,8 +490,16 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '🎁 Referral',
                       color: Colors.deepOrange,
                       children: [
-                        _buildSubItem(context, 'Invite Friends', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Referral Earnings', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Invite Friends',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Referral Earnings',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -340,9 +510,21 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '🛠 Support',
                       color: Colors.brown,
                       children: [
-                        _buildSubItem(context, 'Help Center', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Report Problem', onTap: () => _close(context)),
-                        _buildSubItem(context, 'FAQ', onTap: () => _close(context)),
+                        _buildSubItem(
+                          context,
+                          'Help Center',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Report Problem',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'FAQ',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -353,18 +535,43 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                       title: '⚙ Settings',
                       color: Colors.grey,
                       children: [
-                        _buildSubItem(context, 'Edit Profile',
-                            onTap: () {
-                              _close(context);
-                              Navigator.of(context).push(MaterialPageRoute(
+                        _buildSubItem(
+                          context,
+                          'Edit Profile',
+                          onTap: () {
+                            _close(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
                                 builder: (_) => const ProfileScreen(),
-                              ));
-                            }),
-                        _buildSubItem(context, 'Change Password', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Notifications', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Privacy', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Theme (Dark / Light)', onTap: () => _close(context)),
-                        _buildSubItem(context, 'Language', onTap: () => _close(context)),
+                              ),
+                            );
+                          },
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Change Password',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Notifications',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Privacy',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Theme (Dark / Light)',
+                          onTap: () => _close(context),
+                        ),
+                        _buildSubItem(
+                          context,
+                          'Language',
+                          onTap: () => _close(context),
+                        ),
                       ],
                     ),
 
@@ -378,8 +585,11 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.logout,
-                            color: Colors.red, size: 20),
+                        child: const Icon(
+                          Icons.logout,
+                          color: Colors.red,
+                          size: 20,
+                        ),
                       ),
                       title: const Text(
                         '🚪 Logout',
@@ -424,8 +634,7 @@ class _FreelancerDrawerState extends State<FreelancerDrawer> {
             });
           },
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
                 Container(

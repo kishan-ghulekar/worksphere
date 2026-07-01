@@ -181,6 +181,11 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
             activeIcon: Icon(Icons.account_balance_wallet),
             label: 'Earnings',
           ),
+          //  BottomNavigationBarItem(
+          //   icon: Icon(Icons.description_outlined),
+          //   activeIcon: Icon(Icons.description),
+          //   label: 'Contracts',
+          // ),
           BottomNavigationBarItem(
             label: 'Profile',
             icon: BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
