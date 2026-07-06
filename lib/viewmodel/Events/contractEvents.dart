@@ -1,5 +1,6 @@
 // lib/viewmodel/Events/contractEvent.dart
 import 'package:equatable/equatable.dart';
+import 'package:super_project/model/contractModel.dart';
 
 abstract class ContractEvent extends Equatable {
   const ContractEvent();
@@ -21,15 +22,32 @@ class LoadFreelancerContracts extends ContractEvent {
   List<Object?> get props => [freelancerId];
 }
 
+class TransitionContractStatus extends ContractEvent {
+  final String contractId;
+  final ContractStatus currentStatus;
+  final ContractStatus newStatus;
+
+  const TransitionContractStatus({
+    required this.contractId,
+    required this.currentStatus,
+    required this.newStatus,
+  });
+
+  @override
+  List<Object?> get props => [contractId, currentStatus, newStatus];
+}
+
 class UpdateMilestoneRequested extends ContractEvent {
   final String contractId;
   final int milestoneIndex;
   final bool isCompleted;
+
   const UpdateMilestoneRequested({
     required this.contractId,
     required this.milestoneIndex,
     required this.isCompleted,
   });
+
   @override
   List<Object?> get props => [contractId, milestoneIndex, isCompleted];
 }
@@ -44,13 +62,6 @@ class SubmitWorkRequested extends ContractEvent {
 class ReleasePaymentRequested extends ContractEvent {
   final String contractId;
   const ReleasePaymentRequested(this.contractId);
-  @override
-  List<Object?> get props => [contractId];
-}
-
-class RaiseDisputeRequested extends ContractEvent {
-  final String contractId;
-  const RaiseDisputeRequested(this.contractId);
   @override
   List<Object?> get props => [contractId];
 }

@@ -1,9 +1,11 @@
-// lib/View/FreelancerDashboard/MyApplicationsPage.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:super_project/View/chats/charRoomScreen.dart';
 import 'package:super_project/model/bidModel.dart';
+import 'package:super_project/repository/chatRepository.dart';
 import 'package:super_project/viewmodel/Bloc/bidBloc.dart';
 import 'package:super_project/viewmodel/Events/bidEvents.dart';
 import 'package:super_project/viewmodel/States/bidStates.dart';
@@ -43,6 +45,12 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -74,9 +82,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
             );
           }
           if (state is BidFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -84,9 +92,12 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final allBids = state is ApplicationsLoaded ? state.allBids : <BidModel>[];
-          final filteredBids = state is ApplicationsLoaded ? state.filteredBids : <BidModel>[];
-          final activeFilter = state is ApplicationsLoaded ? state.activeFilter : 'all';
+          final allBids =
+              state is ApplicationsLoaded ? state.allBids : <BidModel>[];
+          final filteredBids =
+              state is ApplicationsLoaded ? state.filteredBids : <BidModel>[];
+          final activeFilter =
+              state is ApplicationsLoaded ? state.activeFilter : 'all';
 
           return Column(
             children: [
@@ -102,16 +113,23 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
                   decoration: InputDecoration(
                     hintText: 'Search applications...',
                     hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.close, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              context.read<BidBloc>().add(const SearchApplications(''));
-                            },
-                          )
-                        : null,
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.grey[400],
+                      size: 20,
+                    ),
+                    suffixIcon:
+                        _searchController.text.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                context.read<BidBloc>().add(
+                                  const SearchApplications(''),
+                                );
+                              },
+                            )
+                            : null,
                     filled: true,
                     fillColor: Colors.grey[100],
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -131,70 +149,86 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
-                    children: _tabs.map((tab) {
-                      final isActive = activeFilter == tab['value'];
-                      final count = tab['value'] == 'all'
-                          ? allBids.length
-                          : allBids.where((b) => b.status == tab['value']).length;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: () {
-                            context.read<BidBloc>().add(
+                    children:
+                        _tabs.map((tab) {
+                          final isActive = activeFilter == tab['value'];
+                          final count =
+                              tab['value'] == 'all'
+                                  ? allBids.length
+                                  : allBids
+                                      .where((b) => b.status == tab['value'])
+                                      .length;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () {
+                                context.read<BidBloc>().add(
                                   FilterApplicationsByStatus(tab['value']!),
                                 );
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? const Color(0xFF5B67F1)
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  tab['label']!,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: isActive
-                                        ? Colors.white
-                                        : Colors.grey[700],
-                                  ),
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
                                 ),
-                                if (count > 0) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isActive
-                                          ? Colors.white.withOpacity(0.3)
-                                          : Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '$count',
+                                decoration: BoxDecoration(
+                                  color:
+                                      isActive
+                                          ? const Color(0xFF5B67F1)
+                                          : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      tab['label']!,
                                       style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: isActive
-                                            ? Colors.white
-                                            : Colors.grey[700],
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            isActive
+                                                ? Colors.white
+                                                : Colors.grey[700],
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ],
+                                    if (count > 0) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isActive
+                                                  ? Colors.white.withOpacity(
+                                                    0.3,
+                                                  )
+                                                  : Colors.grey[300],
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '$count',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                isActive
+                                                    ? Colors.white
+                                                    : Colors.grey[700],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                          );
+                        }).toList(),
                   ),
                 ),
               ),
@@ -203,19 +237,20 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
 
               // Applications List
               Expanded(
-                child: filteredBids.isEmpty
-                    ? _buildEmptyState(activeFilter)
-                    : RefreshIndicator(
-                        onRefresh: _onRefresh,
-                        color: const Color(0xFF5B67F1),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: filteredBids.length,
-                          itemBuilder: (context, index) {
-                            return ApplicationCard(bid: filteredBids[index]);
-                          },
+                child:
+                    filteredBids.isEmpty
+                        ? _buildEmptyState(activeFilter)
+                        : RefreshIndicator(
+                          onRefresh: _onRefresh,
+                          color: const Color(0xFF5B67F1),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: filteredBids.length,
+                            itemBuilder: (context, index) {
+                              return ApplicationCard(bid: filteredBids[index]);
+                            },
+                          ),
                         ),
-                      ),
               ),
             ],
           );
@@ -249,12 +284,6 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }
 
@@ -320,13 +349,15 @@ class ApplicationCard extends StatelessWidget {
 
   List<_StepItem> _buildSteps(String status) {
     final steps = ['Applied', 'Review', 'Shortlisted', 'Hired'];
-    final activeIndex = {
-      'pending': 0,
-      'under_review': 1,
-      'shortlisted': 2,
-      'accepted': 3,
-      'rejected': 1,
-    }[status] ?? 0;
+    final activeIndex =
+        {
+          'pending': 0,
+          'under_review': 1,
+          'shortlisted': 2,
+          'accepted': 3,
+          'rejected': 1,
+        }[status] ??
+        0;
 
     return steps.asMap().entries.map((e) {
       return _StepItem(
@@ -381,8 +412,10 @@ class ApplicationCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
@@ -404,8 +437,11 @@ class ApplicationCard extends StatelessWidget {
           // Applied date + Bid amount
           Row(
             children: [
-              Icon(Icons.calendar_today_outlined,
-                  size: 13, color: Colors.grey[500]),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 13,
+                color: Colors.grey[500],
+              ),
               const SizedBox(width: 4),
               Text(
                 'Applied $formattedDate',
@@ -444,22 +480,23 @@ class ApplicationCard extends StatelessWidget {
             // Step indicators
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: steps.map((step) {
-                return Text(
-                  step.label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: step.isActive
-                        ? FontWeight.w700
-                        : FontWeight.normal,
-                    color: step.isActive
-                        ? statusColor
-                        : step.isDone
-                            ? Colors.grey[600]
-                            : Colors.grey[400],
-                  ),
-                );
-              }).toList(),
+              children:
+                  steps.map((step) {
+                    return Text(
+                      step.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight:
+                            step.isActive ? FontWeight.w700 : FontWeight.normal,
+                        color:
+                            step.isActive
+                                ? statusColor
+                                : step.isDone
+                                ? Colors.grey[600]
+                                : Colors.grey[400],
+                      ),
+                    );
+                  }).toList(),
             ),
             const SizedBox(height: 16),
           ],
@@ -473,30 +510,36 @@ class ApplicationCard extends StatelessWidget {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Withdraw Application'),
-                          content: const Text(
-                              'Are you sure you want to withdraw this application?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                context
-                                    .read<BidBloc>()
-                                    .add(WithdrawBidRequested(bid.bidId));
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
+                        builder:
+                            (ctx) => AlertDialog(
+                              title: const Text('Withdraw Application'),
+                              content: const Text(
+                                'Are you sure you want to withdraw this application?',
                               ),
-                              child: const Text('Withdraw',
-                                  style: TextStyle(color: Colors.white)),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    // dispatch withdraw event
+                                    // Note: BidBloc is expected to be provided higher in the tree
+                                    BlocProvider.of<BidBloc>(
+                                      context,
+                                    ).add(WithdrawBidRequested(bid.bidId));
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                  ),
+                                  child: const Text(
+                                    'Withdraw',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
                       );
                     },
                     style: OutlinedButton.styleFrom(
@@ -507,9 +550,13 @@ class ApplicationCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text('Withdraw',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Withdraw',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -517,11 +564,70 @@ class ApplicationCard extends StatelessWidget {
               if (bid.status == 'accepted') ...[
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () async {
+                      final currentUser = FirebaseAuth.instance.currentUser;
+                      if (currentUser == null) return;
+
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder:
+                            (_) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                      );
+
+                      try {
+                        // fetch project to obtain clientId (BidModel doesn't include it)
+                        final projDoc =
+                            await FirebaseFirestore.instance
+                                .collection('projects')
+                                .doc(bid.projectId)
+                                .get();
+                        final clientId =
+                            projDoc.exists
+                                ? (projDoc.data()?['clientId'] as String? ?? '')
+                                : '';
+
+                        final chatId = await ChatRepository().getOrCreateChat(
+                          projectId: bid.projectId,
+                          projectTitle: bid.projectTitle,
+                          clientId: clientId,
+                          freelancerId: currentUser.uid,
+                        );
+
+                        if (context.mounted) {
+                          Navigator.pop(context); // close loading
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => ChatRoomScreen(
+                                    chatId: chatId,
+                                    currentUserId: currentUser.uid,
+                                    isClient: false,
+                                    receiverId: clientId,
+                                    projectTitle: bid.projectTitle,
+                                  ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to open chat: $e')),
+                          );
+                        }
+                      }
+                    },
                     icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                    label: const Text('Message Client',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
+                    label: const Text(
+                      'Message Client',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5B67F1),
                       foregroundColor: Colors.white,
@@ -537,7 +643,9 @@ class ApplicationCard extends StatelessWidget {
               ],
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    //  Navigator.of(context).push(MaterialPageRoute(builder:(_)=> const ProjectDetailsPage(project:)))
+                  },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey[700],
                     side: BorderSide(color: Colors.grey[300]!),
@@ -546,9 +654,10 @@ class ApplicationCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('View Details',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'View Details',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],

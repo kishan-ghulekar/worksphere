@@ -64,19 +64,23 @@ class BidRepository {
   Future<void> acceptBid(String bidId, String projectId) async {
     final batch = _firestore.batch();
 
-    // Get the bid data first
     final bidDoc = await _bidsRef.doc(bidId).get();
     final bid = BidModel.fromMap(bidDoc.data()!);
 
-    // Get the project data
     final projectDoc =
         await _firestore.collection('projects').doc(projectId).get();
     final project = ProjectModel.fromMap(projectDoc.data()!);
 
-    // Accept this bid
+    // Get client name from clients collection
+    final clientDoc =
+        await _firestore.collection('clients').doc(project.clientId).get();
+    final clientName =
+        clientDoc.exists
+            ? (clientDoc.data()!['name'] as String? ?? 'Client')
+            : 'Client';
+
     batch.update(_bidsRef.doc(bidId), {'status': 'accepted'});
 
-    // Reject all other pending bids
     final otherBids =
         await _bidsRef
             .where('projectId', isEqualTo: projectId)
@@ -89,35 +93,36 @@ class BidRepository {
       }
     }
 
-    // Update project status
+    // Project stays Open until client activates contract
     batch.update(_firestore.collection('projects').doc(projectId), {
-      'status': 'In Progress',
+      'status': 'Pending',
     });
 
-    // Create contract document
+    // Create contract with PENDING status
     final contractRef = _firestore.collection('contracts').doc(projectId);
-
-    final defaultMilestones = [
-      {'title': 'Project Kickoff', 'isCompleted': false},
-      {'title': 'First Delivery', 'isCompleted': false},
-      {'title': 'Review & Feedback', 'isCompleted': false},
-      {'title': 'Final Delivery', 'isCompleted': false},
-    ];
-
     batch.set(contractRef, {
       'contractId': projectId,
       'projectId': projectId,
       'projectTitle': project.title,
       'clientId': project.clientId,
+      'clientName': clientName,
       'freelancerId': bid.freelancerId,
       'freelancerName': bid.freelancerName,
       'agreedAmount': bid.bidAmount,
       'duration': bid.estimatedDuration,
-      'status': 'active',
-      'milestones': defaultMilestones,
+      'status': 'pending', // ← starts as pending
+      'milestones': [
+        {'title': 'Project Kickoff', 'isCompleted': false},
+        {'title': 'First Delivery', 'isCompleted': false},
+        {'title': 'Review & Feedback', 'isCompleted': false},
+        {'title': 'Final Delivery', 'isCompleted': false},
+      ],
       'workSubmitted': false,
       'paymentReleased': false,
       'startDate': Timestamp.fromDate(DateTime.now()),
+      'deadline': Timestamp.fromDate(
+        DateTime.now().add(const Duration(days: 30)),
+      ),
     });
 
     await batch.commit();
@@ -125,5 +130,8 @@ class BidRepository {
 
   Future<void> withdrawBid(String bidId) async {
   await _bidsRef.doc(bidId).update({'status': 'withdrawn'});
+}
+Future<void> updateBidStatus(String bidId, String status) async {
+  await _bidsRef.doc(bidId).update({'status': status});
 }
 }

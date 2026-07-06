@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:super_project/View/ClientScreens/ClientDashboard.dart';
 import 'package:super_project/View/ClientScreens/ResetPasswordPage.dart';
 import 'package:super_project/View/ClientScreens/roleSelectionPage.dart';
-
 import 'package:super_project/View/FreelancerDashboard/freelancerDashboard.dart';
+import 'package:super_project/repository/chatRepository.dart';
 import 'package:super_project/viewmodel/Bloc/authBloc.dart';
 import 'package:super_project/viewmodel/Events/authEvent.dart';
 import 'package:super_project/viewmodel/States/authState.dart';
@@ -35,8 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Fires the event — AuthBloc handles everything from here
     context.read<AuthBloc>().add(
-          LoginRequested(email: email, password: password),
-        );
+      LoginRequested(email: email, password: password),
+    );
   }
 
   @override
@@ -60,6 +60,16 @@ class _LoginScreenState extends State<LoginScreen> {
               listener: (context, state) {
                 if (state is AuthSuccess) {
                   final role = state.user.role;
+
+                  // ← ADD THIS — sets user doc and online status after login
+                  ChatRepository().ensureUserDoc(
+                    uid: state.user.uid,
+                    name: state.user.name,
+                    profileImage: state.user.profileImage,
+                    role: role,
+                  );
+                  ChatRepository().setOnlineStatus(state.user.uid, true);
+
                   if (role == 'client') {
                     Navigator.pushReplacement(
                       context,
@@ -76,9 +86,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   }
                 } else if (state is AuthFailure) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message)),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.message)));
                 }
               },
               builder: (context, state) {
@@ -88,11 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Image.asset(
-                      "assets/AppLogo1.png",
-                      height: 200,
-                      width: 150,
-                    ),
+                    Image.asset("assets/AppLogo1.png", height: 200, width: 150),
                     const Text(
                       'Login to WorkSphere',
                       style: TextStyle(
@@ -216,16 +222,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Text("Login"),
+                      child:
+                          isLoading
+                              ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                              : const Text("Login"),
                     ),
                     const SizedBox(height: 16),
 

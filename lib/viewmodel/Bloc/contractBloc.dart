@@ -11,10 +11,10 @@ class ContractBloc extends Bloc<ContractEvent, ContractState> {
   ContractBloc(this.repository) : super(ContractInitial()) {
     on<LoadClientContracts>(_onLoadClientContracts);
     on<LoadFreelancerContracts>(_onLoadFreelancerContracts);
+    on<TransitionContractStatus>(_onTransitionStatus);
     on<UpdateMilestoneRequested>(_onUpdateMilestone);
     on<SubmitWorkRequested>(_onSubmitWork);
     on<ReleasePaymentRequested>(_onReleasePayment);
-    on<RaiseDisputeRequested>(_onRaiseDispute);
   }
 
   Future<void> _onLoadClientContracts(
@@ -41,6 +41,23 @@ class ContractBloc extends Bloc<ContractEvent, ContractState> {
       onError: (error, _) =>
           ContractFailure("Failed to load contracts: $error"),
     );
+  }
+
+  Future<void> _onTransitionStatus(
+    TransitionContractStatus event,
+    Emitter<ContractState> emit,
+  ) async {
+    try {
+      await repository.transitionStatus(
+        event.contractId,
+        event.currentStatus,
+        event.newStatus,
+      );
+      emit(ContractActionSuccess(
+          'Status updated to ${event.newStatus.name}'));
+    } catch (e) {
+      emit(ContractFailure(e.toString()));
+    }
   }
 
   Future<void> _onUpdateMilestone(
@@ -76,21 +93,9 @@ class ContractBloc extends Bloc<ContractEvent, ContractState> {
   ) async {
     try {
       await repository.releasePayment(event.contractId);
-      emit(const ContractActionSuccess('Payment released! Project completed.'));
+      emit(const ContractActionSuccess('Payment released!'));
     } catch (e) {
       emit(ContractFailure("Failed to release payment: $e"));
-    }
-  }
-
-  Future<void> _onRaiseDispute(
-    RaiseDisputeRequested event,
-    Emitter<ContractState> emit,
-  ) async {
-    try {
-      await repository.raiseDispute(event.contractId);
-      emit(const ContractActionSuccess('Dispute raised successfully.'));
-    } catch (e) {
-      emit(ContractFailure("Failed to raise dispute: $e"));
     }
   }
 }

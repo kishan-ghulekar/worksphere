@@ -5,14 +5,15 @@ import 'package:super_project/model/contractModel.dart';
 class ContractRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  CollectionReference<Map<String, dynamic>> get _contractsRef =>
+  CollectionReference<Map<String, dynamic>> get _ref =>
       _firestore.collection('contracts');
 
-  // Called when client hires a freelancer — creates contract automatically
+  // Create contract with pending status when bid is accepted
   Future<void> createContract({
     required String projectId,
     required String projectTitle,
     required String clientId,
+    required String clientName,
     required String freelancerId,
     required String freelancerName,
     required double agreedAmount,
@@ -30,86 +31,101 @@ class ContractRepository {
       projectId: projectId,
       projectTitle: projectTitle,
       clientId: clientId,
+      clientName: clientName,
       freelancerId: freelancerId,
       freelancerName: freelancerName,
       agreedAmount: agreedAmount,
       duration: duration,
-      status: 'active',
+      status: ContractStatus.pending, // always starts as pending
       milestones: defaultMilestones,
       workSubmitted: false,
       paymentReleased: false,
       startDate: DateTime.now(),
+      deadline: DateTime.now().add(const Duration(days: 30)),
     );
 
-    await _contractsRef.doc(projectId).set(contract.toMap());
+    await _ref.doc(projectId).set(contract.toMap());
   }
 
-  // Stream contracts for client
-  Stream<List<ContractModel>> streamClientContracts(String clientId) {
-    return _contractsRef
-        .where('clientId', isEqualTo: clientId)
-        .orderBy('startDate', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => ContractModel.fromMap(doc.data()))
-            .toList());
-  }
+  // Generic status transition with validation
+  Future<void> transitionStatus(
+    String contractId,
+    ContractStatus currentStatus,
+    ContractStatus newStatus,
+  ) async {
+    if (!currentStatus.canTransitionTo(newStatus)) {
+      throw Exception(
+          'Invalid transition: ${currentStatus.value} → ${newStatus.value}');
+    }
 
-  // Stream contracts for freelancer
-  Stream<List<ContractModel>> streamFreelancerContracts(
-      String freelancerId) {
-    return _contractsRef
-        .where('freelancerId', isEqualTo: freelancerId)
-        .orderBy('startDate', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => ContractModel.fromMap(doc.data()))
-            .toList());
-  }
-
-  // Freelancer marks milestone done
-  Future<void> updateMilestone(
-      String contractId, int index, bool isCompleted) async {
-    final doc = await _contractsRef.doc(contractId).get();
-    final contract = ContractModel.fromMap(doc.data()!);
-    final updated = List<MilestoneModel>.from(contract.milestones);
-    updated[index] = MilestoneModel(
-      title: updated[index].title,
-      isCompleted: isCompleted,
-    );
-    await _contractsRef
-        .doc(contractId)
-        .update({'milestones': updated.map((m) => m.toMap()).toList()});
-  }
-
-  // Freelancer submits work
-  Future<void> submitWork(String contractId) async {
-    await _contractsRef
-        .doc(contractId)
-        .update({'workSubmitted': true});
-  }
-
-  // Client releases payment and marks completed
-  Future<void> releasePayment(String contractId) async {
     final batch = _firestore.batch();
-    batch.update(_contractsRef.doc(contractId), {
-      'paymentReleased': true,
-      'status': 'completed',
-    });
-    // Also update the project status
-    final contract = ContractModel.fromMap(
-        (await _contractsRef.doc(contractId).get()).data()!);
+
+    batch.update(_ref.doc(contractId), {'status': newStatus.value});
+
+    // Also update project status in sync
+    final contract =
+        ContractModel.fromMap((await _ref.doc(contractId).get()).data()!);
+
+    String projectStatus;
+    switch (newStatus) {
+      case ContractStatus.active:
+        projectStatus = 'In Progress';
+        break;
+      case ContractStatus.completed:
+        projectStatus = 'Completed';
+        break;
+      case ContractStatus.cancelled:
+        projectStatus = 'Closed';
+        break;
+      default:
+        projectStatus = 'Open';
+    }
+
     batch.update(
       _firestore.collection('projects').doc(contract.projectId),
-      {'status': 'Completed'},
+      {'status': projectStatus},
     );
+
     await batch.commit();
   }
 
-  // Raise dispute
-  Future<void> raiseDispute(String contractId) async {
-    await _contractsRef
-        .doc(contractId)
-        .update({'status': 'disputed'});
+  // Stream by clientId
+  Stream<List<ContractModel>> streamClientContracts(String clientId) {
+    return _ref
+        .where('clientId', isEqualTo: clientId)
+        .orderBy('startDate', descending: true)
+        .snapshots()
+        .map((s) =>
+            s.docs.map((d) => ContractModel.fromMap(d.data())).toList());
+  }
+
+  // Stream by freelancerId
+  Stream<List<ContractModel>> streamFreelancerContracts(
+      String freelancerId) {
+    return _ref
+        .where('freelancerId', isEqualTo: freelancerId)
+        .orderBy('startDate', descending: true)
+        .snapshots()
+        .map((s) =>
+            s.docs.map((d) => ContractModel.fromMap(d.data())).toList());
+  }
+
+  Future<void> updateMilestone(
+      String contractId, int index, bool isCompleted) async {
+    final doc = await _ref.doc(contractId).get();
+    final contract = ContractModel.fromMap(doc.data()!);
+    final updated = List<MilestoneModel>.from(contract.milestones);
+    updated[index] =
+        MilestoneModel(title: updated[index].title, isCompleted: isCompleted);
+    await _ref.doc(contractId).update(
+        {'milestones': updated.map((m) => m.toMap()).toList()});
+  }
+
+  Future<void> submitWork(String contractId) async {
+    await _ref.doc(contractId).update({'workSubmitted': true});
+  }
+
+  Future<void> releasePayment(String contractId) async {
+    await _ref.doc(contractId).update({'paymentReleased': true});
   }
 }

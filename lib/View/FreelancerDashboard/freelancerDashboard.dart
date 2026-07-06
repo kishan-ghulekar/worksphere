@@ -5,8 +5,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:super_project/View/FreelancerDashboard/FreelancerProfile.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
+import 'package:super_project/View/FreelancerDashboard/contractScreen.dart';
 import 'package:super_project/View/FreelancerDashboard/drawerPage.dart';
 import 'package:super_project/View/FreelancerDashboard/myApplicationPage.dart';
+import 'package:super_project/View/chats/chatListScreen.dart';
 import 'package:super_project/model/projectModel.dart';
 import 'package:super_project/viewmodel/Bloc/freelancerProfileBloc.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
@@ -144,123 +146,132 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
-          if (index == 1) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const MyApplicationsPage(),
+     bottomNavigationBar: BottomNavigationBar(
+  currentIndex: _selectedIndex,
+  onTap: (index) {
+    setState(() => _selectedIndex = index);
+    if (index == 1) {
+      // ignore: inference_failure_on_instance_creation
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const MyApplicationsPage(),
+      ));
+    } else if (index == 2) {
+      // ignore: inference_failure_on_instance_creation
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const ChatListScreen(),
+      ));
+    } else if (index == 3) {
+      // ignore: inference_failure_on_instance_creation
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const FreelancerContractsPage(),
+      ));
+    } else if (index == 4) {
+      // ignore: inference_failure_on_instance_creation
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const ProfileScreen(),
+      ));
+    }
+  },
+  type: BottomNavigationBarType.fixed,
+  selectedItemColor: const Color(0xFF5B67F1),
+  unselectedItemColor: Colors.grey,
+  selectedFontSize: 11,
+  unselectedFontSize: 11,
+  items: [
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.home_outlined),
+      activeIcon: Icon(Icons.home),
+      label: 'Dashboard',
+    ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.work_outline),
+      activeIcon: Icon(Icons.work),
+      label: 'Projects',
+    ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.chat_bubble_outline),
+      activeIcon: Icon(Icons.chat_bubble),
+      label: 'Messages',
+    ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.description_outlined),
+      activeIcon: Icon(Icons.description),
+      label: 'Contracts',
+    ),
+    // Profile with dynamic image
+    BottomNavigationBarItem(
+      label: 'Profile',
+      icon: BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
+        builder: (context, state) {
+          final imageUrl = state is FreelancerProfileLoaded
+              ? state.freelancer.profileImageUrl
+              : '';
+          final name = state is FreelancerProfileLoaded
+              ? state.freelancer.name
+              : '';
+          if (imageUrl.isNotEmpty) {
+            return CircleAvatar(
+              radius: 13,
+              backgroundImage: CachedNetworkImageProvider(imageUrl),
+            );
+          }
+          return CircleAvatar(
+            radius: 13,
+            backgroundColor:
+                const Color(0xFF6C5CE7).withOpacity(0.15),
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : 'F',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF6C5CE7),
+              ),
+            ),
+          );
+        },
+      ),
+      activeIcon:
+          BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
+        builder: (context, state) {
+          final imageUrl = state is FreelancerProfileLoaded
+              ? state.freelancer.profileImageUrl
+              : '';
+          final name = state is FreelancerProfileLoaded
+              ? state.freelancer.name
+              : '';
+          if (imageUrl.isNotEmpty) {
+            return CircleAvatar(
+              radius: 15,
+              backgroundImage: CachedNetworkImageProvider(imageUrl),
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF5B67F1),
+                    width: 2,
+                  ),
+                ),
               ),
             );
-          } else if (index == 3) {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
           }
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF5B67F1),
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Dashboard',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: 'Projects',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            activeIcon: Icon(Icons.account_balance_wallet),
-            label: 'Earnings',
-          ),
-          //  BottomNavigationBarItem(
-          //   icon: Icon(Icons.description_outlined),
-          //   activeIcon: Icon(Icons.description),
-          //   label: 'Contracts',
-          // ),
-          BottomNavigationBarItem(
-            label: 'Profile',
-            icon: BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
-              builder: (context, state) {
-                final imageUrl =
-                    state is FreelancerProfileLoaded
-                        ? state.freelancer.profileImageUrl
-                        : '';
-                final name =
-                    state is FreelancerProfileLoaded
-                        ? state.freelancer.name
-                        : '';
-                if (imageUrl.isNotEmpty) {
-                  return CircleAvatar(
-                    radius: 13,
-                    backgroundImage: CachedNetworkImageProvider(imageUrl),
-                  );
-                }
-                return CircleAvatar(
-                  radius: 13,
-                  backgroundColor: const Color(0xFF6C5CE7).withOpacity(0.15),
-                  child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : 'F',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF6C5CE7),
-                    ),
-                  ),
-                );
-              },
+          return CircleAvatar(
+            radius: 15,
+            backgroundColor:
+                const Color(0xFF6C5CE7).withOpacity(0.3),
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : 'F',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF6C5CE7),
+              ),
             ),
-            activeIcon:
-                BlocBuilder<FreelancerProfileBloc, FreelancerProfileState>(
-                  builder: (context, state) {
-                    final imageUrl =
-                        state is FreelancerProfileLoaded
-                            ? state.freelancer.profileImageUrl
-                            : '';
-                    final name =
-                        state is FreelancerProfileLoaded
-                            ? state.freelancer.name
-                            : '';
-                    if (imageUrl.isNotEmpty) {
-                      return CircleAvatar(
-                        radius: 15,
-                        backgroundImage: CachedNetworkImageProvider(imageUrl),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF5B67F1),
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    return CircleAvatar(
-                      radius: 15,
-                      backgroundColor: const Color(0xFF6C5CE7).withOpacity(0.3),
-                      child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : 'F',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF6C5CE7),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-          ),
-        ],
+          );
+        },
       ),
+    ),
+  ],
+),
     );
   }
 }

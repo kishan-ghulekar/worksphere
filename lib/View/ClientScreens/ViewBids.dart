@@ -1,8 +1,11 @@
 // lib/View/ClientScreens/ViewBids.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:super_project/View/chats/charRoomScreen.dart';
 import 'package:super_project/model/bidModel.dart';
 import 'package:super_project/model/projectModel.dart';
+import 'package:super_project/repository/chatRepository.dart';
 import 'package:super_project/viewmodel/Bloc/bidBloc.dart';
 import 'package:super_project/viewmodel/Events/bidEvents.dart';
 import 'package:super_project/viewmodel/States/bidStates.dart';
@@ -53,8 +56,10 @@ class _ViewBidsPageState extends State<ViewBidsPage> {
 
           if (state is BidFailure) {
             return Center(
-              child: Text(state.message,
-                  style: const TextStyle(color: Colors.red)),
+              child: Text(
+                state.message,
+                style: const TextStyle(color: Colors.red),
+              ),
             );
           }
 
@@ -75,10 +80,7 @@ class _ViewBidsPageState extends State<ViewBidsPage> {
             padding: const EdgeInsets.all(16),
             itemCount: bids.length,
             itemBuilder: (context, index) {
-              return BidCard(
-                bid: bids[index],
-                project: widget.project,
-              );
+              return BidCard(bid: bids[index], project: widget.project);
             },
           );
         },
@@ -155,15 +157,16 @@ class BidCard extends StatelessWidget {
                     ),
                     Text(
                       'Submitted ${_timeAgo(bid.createdAt)}',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _statusColor(bid.status).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
@@ -184,8 +187,10 @@ class BidCard extends StatelessWidget {
           // Bid amount and duration
           Row(
             children: [
-              _infoChip(Icons.currency_rupee,
-                  '₹${bid.bidAmount.toStringAsFixed(0)}'),
+              _infoChip(
+                Icons.currency_rupee,
+                '₹${bid.bidAmount.toStringAsFixed(0)}',
+              ),
               const SizedBox(width: 12),
               _infoChip(Icons.schedule, bid.estimatedDuration),
             ],
@@ -196,15 +201,19 @@ class BidCard extends StatelessWidget {
           Text(
             'Cover Letter',
             style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600]),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             bid.coverLetter,
             style: TextStyle(
-                fontSize: 13, color: Colors.grey[700], height: 1.5),
+              fontSize: 13,
+              color: Colors.grey[700],
+              height: 1.5,
+            ),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -219,35 +228,37 @@ class BidCard extends StatelessWidget {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Hire Freelancer'),
-                          content: Text(
-                            'Are you sure you want to hire ${bid.freelancerName}? All other bids will be rejected.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                context.read<BidBloc>().add(
+                        builder:
+                            (ctx) => AlertDialog(
+                              title: const Text('Hire Freelancer'),
+                              content: Text(
+                                'Are you sure you want to hire ${bid.freelancerName}? All other bids will be rejected.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    context.read<BidBloc>().add(
                                       AcceptBidRequested(
                                         bidId: bid.bidId,
                                         projectId: project.projectId,
                                       ),
                                     );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF5B67F1),
-                              ),
-                              child: const Text('Hire',
-                                  style:
-                                      TextStyle(color: Colors.white)),
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF5B67F1),
+                                  ),
+                                  child: const Text(
+                                    'Hire',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -259,19 +270,48 @@ class BidCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text('Hire',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Hire',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {},
+                    // In ViewBidsPage BidCard Chat button onPressed:
+                    onPressed: () async {
+                      final chatId = await ChatRepository().getOrCreateChat(
+                        projectId: project.projectId,
+                        projectTitle: project.title,
+                        clientId: project.clientId,
+                        freelancerId: bid.freelancerId,
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder:
+                              (_) => ChatRoomScreen(
+                                chatId: chatId,
+                                currentUserId:
+                                    FirebaseAuth.instance.currentUser!.uid,
+                                isClient: true,
+                                receiverId: bid.freelancerId,
+                                projectTitle: project.title,
+                              ),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                    label: const Text('Chat',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    label: const Text(
+                      'Chat',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF5B67F1),
                       side: const BorderSide(color: Color(0xFF5B67F1)),
@@ -301,11 +341,14 @@ class BidCard extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: Colors.grey[700]),
           const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700])),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
         ],
       ),
     );

@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:super_project/model/userModel.dart';
-
+import 'package:super_project/model/user_model.dart';
 /// Wraps all Firebase Auth + Firestore calls related to user accounts.
 /// The Bloc layer talks to this class — it never calls FirebaseAuth or
 /// FirebaseFirestore directly.

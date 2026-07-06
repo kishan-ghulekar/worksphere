@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:super_project/model/projectModel.dart';
-import 'package:super_project/model/userModel.dart';
+import 'package:super_project/model/user_model.dart';
+
 import 'package:super_project/viewmodel/States/projectState.dart';
 
 

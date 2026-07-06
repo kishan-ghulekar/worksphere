@@ -3,7 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:super_project/View/ClientScreens/contractorStatusHelper.dart';
+import 'package:super_project/View/chats/charRoomScreen.dart';
 import 'package:super_project/model/contractModel.dart';
+import 'package:super_project/repository/chatRepository.dart';
 import 'package:super_project/viewmodel/Bloc/contractBloc.dart';
 import 'package:super_project/viewmodel/Events/contractEvents.dart';
 import 'package:super_project/viewmodel/States/contractStates.dart';
@@ -23,7 +26,7 @@ class _FreelancerContractsPageState extends State<FreelancerContractsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       context.read<ContractBloc>().add(LoadFreelancerContracts(uid));
@@ -59,27 +62,31 @@ class _FreelancerContractsPageState extends State<FreelancerContractsPage>
           unselectedLabelColor: Colors.grey,
           indicatorColor: const Color(0xFF5B67F1),
           indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Active'),
-            Tab(text: 'Completed'),
-            Tab(text: 'Disputed'),
-          ],
+          isScrollable: true,
+          tabs: ContractStatus.values
+              .map((s) => Tab(
+                    child: Row(
+                      children: [
+                        Icon(ContractStatusHelper.icon(s), size: 14),
+                        const SizedBox(width: 4),
+                        Text(ContractStatusHelper.label(s)),
+                      ],
+                    ),
+                  ))
+              .toList(),
         ),
       ),
       body: BlocConsumer<ContractBloc, ContractState>(
         listener: (context, state) {
           if (state is ContractActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: const Color(0xFF00BFA5),
-              ),
-            );
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.message),
+              backgroundColor: const Color(0xFF00BFA5),
+            ));
           }
           if (state is ContractFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -87,22 +94,63 @@ class _FreelancerContractsPageState extends State<FreelancerContractsPage>
             return const Center(child: CircularProgressIndicator());
           }
 
-          final contracts =
-              state is ContractsLoaded ? state.contracts : <ContractModel>[];
+          final all = state is ContractsLoaded
+              ? state.contracts
+              : <ContractModel>[];
 
-          final active =
-              contracts.where((c) => c.status == 'active').toList();
-          final completed =
-              contracts.where((c) => c.status == 'completed').toList();
-          final disputed =
-              contracts.where((c) => c.status == 'disputed').toList();
-
-          return TabBarView(
-            controller: _tabController,
+          return Column(
             children: [
-              _buildList(active),
-              _buildList(completed),
-              _buildList(disputed),
+              // Summary
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: ContractStatus.values.map((s) {
+                    final count =
+                        all.where((c) => c.status == s).length;
+                    return Expanded(
+                      child: Container(
+                        margin: EdgeInsets.only(
+                            right: s != ContractStatus.cancelled
+                                ? 8
+                                : 0),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: ContractStatusHelper.color(s)
+                              .withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          children: [
+                            Text('$count',
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        ContractStatusHelper.color(s))),
+                            Text(ContractStatusHelper.label(s),
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[600])),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: ContractStatus.values.map((status) {
+                    final filtered =
+                        all.where((c) => c.status == status).toList();
+                    return _buildList(filtered, status);
+                  }).toList(),
+                ),
+              ),
             ],
           );
         },
@@ -110,16 +158,19 @@ class _FreelancerContractsPageState extends State<FreelancerContractsPage>
     );
   }
 
-  Widget _buildList(List<ContractModel> contracts) {
+  Widget _buildList(
+      List<ContractModel> contracts, ContractStatus status) {
     if (contracts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.description_outlined,
-                size: 64, color: Colors.grey[300]),
+            Icon(ContractStatusHelper.icon(status),
+                size: 64,
+                color: ContractStatusHelper.color(status)
+                    .withOpacity(0.3)),
             const SizedBox(height: 16),
-            Text('No contracts here.',
+            Text('No ${ContractStatusHelper.label(status)} contracts.',
                 style:
                     TextStyle(color: Colors.grey[500], fontSize: 14)),
           ],
@@ -129,28 +180,48 @@ class _FreelancerContractsPageState extends State<FreelancerContractsPage>
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: contracts.length,
-      itemBuilder: (context, index) =>
-          FreelancerContractCard(contract: contracts[index]),
+      itemBuilder: (context, index) => FreelancerContractCard(
+        contract: contracts[index],
+        onSubmitWork: () {
+          context.read<ContractBloc>().add(
+              SubmitWorkRequested(contracts[index].contractId));
+        },
+        onMilestoneToggle: (i, val) {
+          context.read<ContractBloc>().add(UpdateMilestoneRequested(
+                contractId: contracts[index].contractId,
+                milestoneIndex: i,
+                isCompleted: val,
+              ));
+        },
+      ),
     );
   }
 }
 
 class FreelancerContractCard extends StatelessWidget {
   final ContractModel contract;
+  final VoidCallback onSubmitWork;
+  final void Function(int, bool) onMilestoneToggle;
 
-  const FreelancerContractCard({super.key, required this.contract});
+  const FreelancerContractCard({
+    super.key,
+    required this.contract,
+    required this.onSubmitWork,
+    required this.onMilestoneToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = ContractStatusHelper.color(contract.status);
     final formattedDate =
         DateFormat('dd MMM yyyy').format(contract.startDate);
-    final progress = contract.progressValue;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border(left: BorderSide(color: statusColor, width: 4)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -159,344 +230,307 @@ class FreelancerContractCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00BFA5).withOpacity(0.08),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(14)),
-              border: Border(
-                  bottom: BorderSide(
-                      color: const Color(0xFF00BFA5).withOpacity(0.2))),
-            ),
-            child: Row(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title + badge
+            Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        contract.projectTitle,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.currency_rupee,
-                              size: 14,
-                              color: Color(0xFF00BFA5)),
-                          Text(
-                            '${contract.agreedAmount.toStringAsFixed(0)} agreed',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF00BFA5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  child: Text(contract.projectTitle,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: contract.status == 'active'
-                        ? const Color(0xFF00BFA5).withOpacity(0.15)
-                        : contract.status == 'completed'
-                            ? const Color(0xFF5B67F1).withOpacity(0.15)
-                            : Colors.red.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    contract.status.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: contract.status == 'active'
-                          ? const Color(0xFF00BFA5)
-                          : contract.status == 'completed'
-                              ? const Color(0xFF5B67F1)
-                              : Colors.red,
-                    ),
-                  ),
+                ContractStatusHelper.badge(contract.status),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            Text('Client: ${contract.clientName}',
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey[600])),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.currency_rupee,
+                    size: 13, color: Colors.grey[600]),
+                Text(
+                  '${contract.agreedAmount.toStringAsFixed(0)}  •  $formattedDate',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Info chips
-                Row(
-                  children: [
-                    _chip(Icons.schedule, contract.duration,
-                        Colors.orange),
-                    const SizedBox(width: 8),
-                    _chip(Icons.calendar_today_outlined, formattedDate,
-                        Colors.blue),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Progress
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Progress',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
-                    Text(
-                      '${(progress * 100).toInt()}%',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF00BFA5)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 6,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: const AlwaysStoppedAnimation(
-                        Color(0xFF00BFA5)),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Milestones — freelancer can check them
-                const Text('Milestones',
+            // Milestones only for active
+            if (contract.status == ContractStatus.active) ...[
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Milestones',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text(
+                    '${(contract.progressValue * 100).toInt()}%',
                     style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                ...contract.milestones.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final m = entry.value;
-                  return Padding(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: contract.progressValue,
+                  minHeight: 5,
+                  backgroundColor: Colors.grey[200],
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(statusColor),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ...contract.milestones.asMap().entries.map((entry) {
+                final i = entry.key;
+                final m = entry.value;
+                return GestureDetector(
+                  onTap: () => onMilestoneToggle(i, !m.isCompleted),
+                  child: Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
-                        GestureDetector(
-                          onTap: contract.status == 'active'
-                              ? () {
-                                  context.read<ContractBloc>().add(
-                                        UpdateMilestoneRequested(
-                                          contractId: contract.contractId,
-                                          milestoneIndex: i,
-                                          isCompleted: !m.isCompleted,
-                                        ),
-                                      );
-                                }
-                              : null,
-                          child: Icon(
-                            m.isCompleted
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked,
-                            size: 22,
-                            color: m.isCompleted
-                                ? const Color(0xFF00BFA5)
-                                : Colors.grey[400],
-                          ),
+                        Icon(
+                          m.isCompleted
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          size: 20,
+                          color: m.isCompleted
+                              ? const Color(0xFF00BFA5)
+                              : Colors.grey[400],
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            m.title,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: m.isCompleted
-                                  ? Colors.grey[500]
-                                  : Colors.black87,
-                              decoration: m.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                          ),
+                          child: Text(m.title,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: m.isCompleted
+                                      ? Colors.grey[500]
+                                      : Colors.black87,
+                                  decoration: m.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null)),
                         ),
                         Text(
                           m.isCompleted ? '✓ Done' : 'Pending',
                           style: TextStyle(
-                            fontSize: 11,
-                            color: m.isCompleted
-                                ? const Color(0xFF00BFA5)
-                                : Colors.grey[400],
-                            fontWeight: FontWeight.w600,
-                          ),
+                              fontSize: 11,
+                              color: m.isCompleted
+                                  ? const Color(0xFF00BFA5)
+                                  : Colors.grey[400],
+                              fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
-                  );
-                }),
-
-                const SizedBox(height: 16),
-
-                // Payment status
-                if (contract.paymentReleased)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00BFA5).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check_circle,
-                            color: Color(0xFF00BFA5), size: 18),
-                        SizedBox(width: 8),
-                        Text('Payment Received!',
-                            style: TextStyle(
-                                color: Color(0xFF00BFA5),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14)),
-                      ],
-                    ),
                   ),
+                );
+              }),
+            ],
 
-                // Action buttons for active contracts
-                if (contract.status == 'active' &&
-                    !contract.paymentReleased)
-                  Row(
-                    children: [
-                      if (!contract.workSubmitted)
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text('Submit Work'),
-                                  content: const Text(
-                                      'Are you sure you want to submit your work to the client for review?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(ctx),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.pop(ctx);
-                                        context
-                                            .read<ContractBloc>()
-                                            .add(SubmitWorkRequested(
-                                                contract.contractId));
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF5B67F1),
-                                      ),
-                                      child: const Text('Submit',
-                                          style: TextStyle(
-                                              color: Colors.white)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.upload_outlined,
-                                size: 16),
-                            label: const Text('Submit Work'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF5B67F1),
-                              foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                      if (contract.workSubmitted)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.orange[50],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.hourglass_top,
-                                    color: Colors.orange, size: 16),
-                                SizedBox(width: 6),
-                                Text('Awaiting Client Review',
-                                    style: TextStyle(
-                                        color: Colors.orange,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.chat_bubble_outline,
-                            size: 16),
-                        label: const Text('Chat'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF5B67F1),
-                          side: const BorderSide(
-                              color: Color(0xFF5B67F1)),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 10, horizontal: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ],
+            const SizedBox(height: 14),
+
+            // Actions by status
+            _buildActions(context),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _chip(IconData icon, String label, Color color) {
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color)),
-        ],
-      ),
-    );
+  Widget _buildActions(BuildContext context) {
+    switch (contract.status) {
+      case ContractStatus.pending:
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.hourglass_top, color: Colors.orange, size: 16),
+              SizedBox(width: 8),
+              Text('Waiting for Client Approval',
+                  style: TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13)),
+            ],
+          ),
+        );
+
+      case ContractStatus.active:
+        return Row(
+          children: [
+            if (!contract.workSubmitted)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Submit Work'),
+                        content: const Text(
+                            'Submit your work for client review?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              onSubmitWork();
+                            },
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    const Color(0xFF5B67F1)),
+                            child: const Text('Submit',
+                                style:
+                                    TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.upload_outlined, size: 16),
+                  label: const Text('Submit Work'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5B67F1),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            if (contract.workSubmitted)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.hourglass_top,
+                          color: Colors.orange, size: 16),
+                      SizedBox(width: 6),
+                      Text('Awaiting Client Review',
+                          style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: () async {
+  final chatId = await ChatRepository().getOrCreateChat(
+    projectId: contract.projectId,
+    projectTitle: contract.projectTitle,
+    clientId: contract.clientId,
+    freelancerId: contract.freelancerId,
+  );
+  Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => ChatRoomScreen(
+      chatId: chatId,
+      currentUserId: FirebaseAuth.instance.currentUser!.uid,
+      isClient: false,
+      receiverId: contract.clientId,
+      projectTitle: contract.projectTitle,
+    ),
+  ));
+},
+              icon: const Icon(Icons.chat_bubble_outline, size: 16),
+              label: const Text('Chat'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF5B67F1),
+                side: const BorderSide(color: Color(0xFF5B67F1)),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        );
+
+      case ContractStatus.completed:
+        return Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.payments_outlined, size: 16),
+                label: const Text('View Payment'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF00BFA5),
+                  side:
+                      const BorderSide(color: Color(0xFF00BFA5)),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.star_outline, size: 16),
+                label: const Text('View Review'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.amber[700],
+                  side: BorderSide(color: Colors.amber[700]!),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case ContractStatus.cancelled:
+        return SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.visibility_outlined, size: 16),
+            label: const Text('View Details'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey,
+              side: BorderSide(color: Colors.grey[300]!),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        );
+    }
   }
 }
