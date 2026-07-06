@@ -215,9 +215,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title:StreamBuilder<UserModel?>(
-  stream: ChatRepository().streamUserProfile(widget.receiverId) as Stream<UserModel?>,
-  builder: (context, snap) {
+        title: StreamBuilder<UserModel?>(
+          stream:
+              ChatRepository().streamUserProfile(widget.receiverId)
+                  as Stream<UserModel?>,
+          builder: (context, snap) {
             final UserModel? user = snap.data;
             final String name = user?.name ?? 'Loading...';
             final String imageUrl = user?.profileImage ?? '';
