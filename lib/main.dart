@@ -17,6 +17,7 @@ import 'package:super_project/viewmodel/Bloc/chatBloc.dart';
 import 'package:super_project/viewmodel/Bloc/clientbloc.dart';
 import 'package:super_project/viewmodel/Bloc/contractBloc.dart';
 import 'package:super_project/viewmodel/Bloc/freelancerProfileBloc.dart';
+import 'package:super_project/viewmodel/Bloc/message_bloc.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
 
 void main() async {
@@ -29,7 +30,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-// ← Changed to StatefulWidget
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -78,6 +78,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
         BlocProvider(create: (_) => ContractBloc(ContractRepository())),
         BlocProvider(create: (_) => ChatBloc(ChatRepository())),
+        BlocProvider(create: (_) => MessageBloc(ChatRepository())),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

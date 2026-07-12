@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:super_project/model/messageModel.dart';
 import 'package:super_project/model/user_model.dart';
 import 'package:super_project/repository/chatRepository.dart';
-import 'package:super_project/viewmodel/Bloc/chatBloc.dart';
+import 'package:super_project/viewmodel/Bloc/message_bloc.dart';
 import 'package:super_project/viewmodel/Events/chatEvent.dart';
 import 'package:super_project/viewmodel/States/chatStates.dart';
 
@@ -41,8 +41,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ChatBloc>().add(LoadMessages(widget.chatId));
-    context.read<ChatBloc>().add(
+    // Always reload messages fresh when screen opens
+    context.read<MessageBloc>().add(LoadMessages(widget.chatId));
+    context.read<MessageBloc>().add(
       MarkMessagesRead(
         chatId: widget.chatId,
         uid: widget.currentUserId,
@@ -55,7 +56,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    context.read<ChatBloc>().add(
+    context.read<MessageBloc>().add(
       SendMessage(
         chatId: widget.chatId,
         senderId: widget.currentUserId,
@@ -73,7 +74,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _onTyping(String value) {
     if (!_isTyping) {
       _isTyping = true;
-      context.read<ChatBloc>().add(
+      context.read<MessageBloc>().add(
         SetTyping(
           chatId: widget.chatId,
           uid: widget.currentUserId,
@@ -88,7 +89,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _stopTyping() {
     if (_isTyping) {
       _isTyping = false;
-      context.read<ChatBloc>().add(
+      context.read<MessageBloc>().add(
         SetTyping(
           chatId: widget.chatId,
           uid: widget.currentUserId,
@@ -127,9 +128,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       body: Column(
         children: [
           Expanded(
-            child: BlocBuilder<ChatBloc, ChatState>(
+            child: BlocBuilder<MessageBloc, ChatState>(
               builder: (context, state) {
-                if (state is ChatLoading) {
+                if (state is ChatLoading || state is ChatInitial) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
@@ -138,28 +139,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
                 if (messages.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.yellow[100]!.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '🔒 Messages are related to: ${widget.projectTitle}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[700],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.yellow[100]!.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '🔒 Messages are related to: ${widget.projectTitle}',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   );
                 }

@@ -26,6 +26,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
   bool _initialized = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      context.read<ChatBloc>().add(LoadChats(uid: _uid, isClient: _isClient));
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     _uid = FirebaseAuth.instance.currentUser!.uid;
@@ -41,21 +49,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _isClient = false; // default, will update
   }
 
-   Future<void> _loadChats() async {
+  Future<void> _loadChats() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_uid)
-          .get();
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(_uid).get();
 
       if (doc.exists && doc.data() != null) {
         final role = (doc.data()!['role'] as String? ?? '').toLowerCase();
         _isClient = role == 'client';
       } else {
-        final clientDoc = await FirebaseFirestore.instance
-            .collection('clients')
-            .doc(_uid)
-            .get();
+        final clientDoc =
+            await FirebaseFirestore.instance
+                .collection('clients')
+                .doc(_uid)
+                .get();
         _isClient = clientDoc.exists;
       }
     } catch (e) {
@@ -63,9 +70,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     } finally {
       if (mounted) {
         setState(() => _initialized = true);
-        context.read<ChatBloc>().add(
-              LoadChats(uid: _uid, isClient: _isClient),
-            );
+        context.read<ChatBloc>().add(LoadChats(uid: _uid, isClient: _isClient));
       }
     }
   }
@@ -105,12 +110,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ? const Center(child: CircularProgressIndicator())
               : BlocBuilder<ChatBloc, ChatState>(
                 builder: (context, state) {
-                  if (state is ChatLoading) {
+                  if (state is ChatLoading || state is ChatInitial) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
                   if (state is ChatFailure) {
                     return Center(child: Text(state.message));
+                  }
+
+                  if (state is MessagesLoaded) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _initialized) {
+                        context.read<ChatBloc>().add(
+                          LoadChats(uid: _uid, isClient: _isClient),
+                        );
+                      }
+                    });
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   final chats =
