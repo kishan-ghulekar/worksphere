@@ -54,7 +54,12 @@ class ContractBloc extends Bloc<ContractEvent, ContractState> {
         event.newStatus,
       );
       emit(ContractActionSuccess(
-          'Status updated to ${event.newStatus.name}'));
+        'Status updated to ${event.newStatus.name}',
+        // Only set when the client just completed the project.
+        completedContractId: event.newStatus == ContractStatus.completed
+            ? event.contractId
+            : null,
+      ));
     } catch (e) {
       emit(ContractFailure(e.toString()));
     }

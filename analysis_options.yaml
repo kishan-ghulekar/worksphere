@@ -4,7 +4,6 @@ linter:
   rules:
     - directives_ordering
     - sort_pub_dependencies
-    - unused_imports
 
 analyzer:
   language:

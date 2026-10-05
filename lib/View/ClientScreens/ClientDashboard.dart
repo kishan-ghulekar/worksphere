@@ -5,6 +5,7 @@ import 'package:super_project/View/ClientScreens/ClientProfile.dart';
 import 'package:super_project/View/ClientScreens/ViewBids.dart';
 import 'package:super_project/View/ClientScreens/contractScreen.dart';
 import 'package:super_project/View/FreelancerDashboard/NotificationPage.dart';
+import 'package:super_project/View/PaymentScreen/PaymentScreen.dart';
 import 'package:super_project/View/chats/chatListScreen.dart';
 import 'package:super_project/model/projectModel.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
@@ -388,8 +389,14 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: Colors.grey[800]),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => NotificationScreen()),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => NotificationScreen(
+                        currentUserId: FirebaseAuth.instance.currentUser!.uid,
+                      ),
+                ),
               );
             },
           ),
@@ -609,94 +616,84 @@ class _ClientDashboardPage extends State<ClientDashboardPage> {
         child: const Icon(Icons.add, size: 28),
       ),
       bottomNavigationBar: BottomNavigationBar(
-  currentIndex: _selectedIndex,
-onTap: (index) {
-  if (index == _selectedIndex) return;
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          if (index == _selectedIndex) return;
 
-  setState(() {
-    _selectedIndex = index;
-  });
+          setState(() {
+            _selectedIndex = index;
+          });
 
-  if (index == 0) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ClientDashboardPage(),
+          if (index == 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ClientDashboardPage()),
+            );
+          } else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ClientContractsPage()),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatListScreen()),
+            );
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PaymentScreen()),
+            );
+          } else if (index == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ClientProfileScreen()),
+            );
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFF5B67F1),
+        unselectedItemColor: Colors.grey,
+        selectedFontSize: 11,
+        unselectedFontSize: 11,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.payments_outlined),
+          //   activeIcon: Icon(Icons.payments),
+          //   label: 'Payments',
+          // ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.description_outlined),
+            activeIcon: Icon(Icons.description),
+            label: 'Contracts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: 'Messages',
+          ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.description_outlined),
+          //   activeIcon: Icon(Icons.description),
+          //   label: 'Contracts',
+          // ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.payments_outlined),
+            activeIcon: Icon(Icons.payments),
+            label: 'Payments',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
-    );
-  } else if (index == 1) {
-   Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ClientContractsPage(),
-      ),
-    );
-  } else if (index == 2) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ChatListScreen(),
-      ),
-    );
-  } else if (index == 3) {
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (_) => const PaymentPage()(),
-    //   ),
-    // );
-  } else if (index == 4) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ClientProfileScreen(),
-      ),
-    );
-  }
-},
-  type: BottomNavigationBarType.fixed,
-  selectedItemColor: const Color(0xFF5B67F1),
-  unselectedItemColor: Colors.grey,
-  selectedFontSize: 11,
-  unselectedFontSize: 11,
-  items: const [
-    BottomNavigationBarItem(
-      icon: Icon(Icons.home_outlined),
-      activeIcon: Icon(Icons.home),
-      label: 'Home',
-    ),
-    // BottomNavigationBarItem(
-    //   icon: Icon(Icons.payments_outlined),
-    //   activeIcon: Icon(Icons.payments),
-    //   label: 'Payments',
-    // ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.description_outlined),
-      activeIcon: Icon(Icons.description),
-      label: 'Contracts',
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.chat_bubble_outline),
-      activeIcon: Icon(Icons.chat_bubble),
-      label: 'Messages',
-    ),
-    // BottomNavigationBarItem(
-    //   icon: Icon(Icons.description_outlined),
-    //   activeIcon: Icon(Icons.description),
-    //   label: 'Contracts',
-    // ),
-     BottomNavigationBarItem(
-      icon: Icon(Icons.payments_outlined),
-      activeIcon: Icon(Icons.payments),
-      label: 'Payments',
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.person_outline),
-      activeIcon: Icon(Icons.person),
-      label: 'Profile',
-    ),
-  ],
-),
     );
   }
 

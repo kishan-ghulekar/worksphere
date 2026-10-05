@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _simulateLoading() {
-    Timer.periodic(const Duration(seconds: 4), (timer) {
+    Timer.periodic(const Duration(seconds: 2), (timer) {
       if (mounted) {
         setState(() {
           _loadingProgress++;

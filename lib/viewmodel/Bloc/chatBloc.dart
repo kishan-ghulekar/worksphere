@@ -1,7 +1,7 @@
 // lib/viewmodel/Bloc/chatBloc.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:super_project/model/messageModel.dart';
 import 'package:super_project/model/chatModel.dart';
+import 'package:super_project/model/messageModel.dart';
 import 'package:super_project/repository/chatRepository.dart';
 import 'package:super_project/viewmodel/Events/chatEvent.dart';
 import 'package:super_project/viewmodel/States/chatStates.dart';

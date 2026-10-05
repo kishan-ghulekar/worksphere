@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:super_project/View/ClientScreens/ClientDashboard.dart';
 import 'package:super_project/View/ClientScreens/SignUpScreen.dart';
-import 'package:super_project/View/FreelancerDashboard/freelancerDashboard.dart';
 
 class ChoosePathPage extends StatefulWidget {
   const ChoosePathPage({super.key});

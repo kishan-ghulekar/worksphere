@@ -128,7 +128,7 @@ class ProjectDetailsPage extends StatelessWidget {
                       color: Colors.black,
                     ),
                     Text(
-                      '${project.budget.toStringAsFixed(0)}',
+                      project.budget.toStringAsFixed(0),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

@@ -4,10 +4,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:super_project/View/ClientScreens/contractorStatusHelper.dart';
+import 'package:super_project/View/PaymentScreen/PaymentScreen.dart';
 import 'package:super_project/model/contractModel.dart';
 import 'package:super_project/viewmodel/Bloc/contractBloc.dart';
 import 'package:super_project/viewmodel/Events/contractEvents.dart';
 import 'package:super_project/viewmodel/States/contractStates.dart';
+
+/// Opens the existing PaymentScreen. Used after "Complete" and by "Pay Now".
+void _openPaymentScreen(BuildContext context, String contractId) {
+  final user = FirebaseAuth.instance.currentUser;
+  final contact = user?.phoneNumber;
+  final email = user?.email;
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => PaymentScreen(
+        contractId: contractId,
+        clientContact: (contact == null || contact.isEmpty) ? null : contact,
+        clientEmail: (email == null || email.isEmpty) ? null : email,
+      ),
+    ),
+  );
+}
 
 class ClientContractsPage extends StatefulWidget {
   const ClientContractsPage({super.key});
@@ -83,6 +102,13 @@ class _ClientContractsPageState extends State<ClientContractsPage>
               content: Text(state.message),
               backgroundColor: const Color(0xFF00BFA5),
             ));
+
+            // Contract just became COMPLETED -> show the payment details
+            // screen. Razorpay does NOT open here; the user taps "Pay Now".
+            final completedId = state.completedContractId;
+            if (completedId != null) {
+              _openPaymentScreen(context, completedId);
+            }
           }
           if (state is ContractFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -106,8 +132,7 @@ class _ClientContractsPageState extends State<ClientContractsPage>
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: ContractStatus.values.map((s) {
-                    final count =
-                        all.where((c) => c.status == s).length;
+                    final count = all.where((c) => c.status == s).length;
                     return Expanded(
                       child: Container(
                         margin: EdgeInsets.only(
@@ -159,8 +184,7 @@ class _ClientContractsPageState extends State<ClientContractsPage>
     );
   }
 
-  Widget _buildList(
-      List<ContractModel> contracts, ContractStatus status) {
+  Widget _buildList(List<ContractModel> contracts, ContractStatus status) {
     if (contracts.isEmpty) {
       return Center(
         child: Column(
@@ -168,8 +192,7 @@ class _ClientContractsPageState extends State<ClientContractsPage>
           children: [
             Icon(ContractStatusHelper.icon(status),
                 size: 64,
-                color: ContractStatusHelper.color(status)
-                    .withOpacity(0.3)),
+                color: ContractStatusHelper.color(status).withOpacity(0.3)),
             const SizedBox(height: 16),
             Text(
               'No ${ContractStatusHelper.label(status)} contracts.',
@@ -226,8 +249,7 @@ class ClientContractCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-            left: BorderSide(color: statusColor, width: 4)),
+        border: Border(left: BorderSide(color: statusColor, width: 4)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -259,17 +281,14 @@ class ClientContractCard extends StatelessWidget {
 
             // Freelancer + amount + date
             Text('Freelancer: ${contract.freelancerName}',
-                style: TextStyle(
-                    fontSize: 12, color: Colors.grey[600])),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.currency_rupee,
-                    size: 13, color: Colors.grey[600]),
+                Icon(Icons.currency_rupee, size: 13, color: Colors.grey[600]),
                 Text(
                   '${contract.agreedAmount.toStringAsFixed(0)}  •  $formattedDate',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -281,8 +300,7 @@ class ClientContractCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Progress',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   Text(
                     '${(contract.progressValue * 100).toInt()}%',
                     style: TextStyle(
@@ -299,8 +317,7 @@ class ClientContractCard extends StatelessWidget {
                   value: contract.progressValue,
                   minHeight: 5,
                   backgroundColor: Colors.grey[200],
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(statusColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                 ),
               ),
             ],
@@ -378,8 +395,7 @@ class ClientContractCard extends StatelessWidget {
                 ),
                 child: Text(
                   '⚠️ Freelancer submitted work. Review and complete.',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.orange[800]),
+                  style: TextStyle(fontSize: 12, color: Colors.orange[800]),
                 ),
               ),
             Row(
@@ -390,17 +406,15 @@ class ClientContractCard extends StatelessWidget {
                       context,
                       ContractStatus.completed,
                       'Mark as Completed',
-                      'Mark this project as completed and release payment to ${contract.freelancerName}?',
+                      'Mark this project as completed and continue to payment for ${contract.freelancerName}?',
                     ),
-                    icon: const Icon(Icons.check_circle_outline,
-                        size: 16),
+                    icon: const Icon(Icons.check_circle_outline, size: 16),
                     label: const Text('Complete'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5B67F1),
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8)),
                     ),
@@ -439,37 +453,89 @@ class ClientContractCard extends StatelessWidget {
         );
 
       case ContractStatus.completed:
-        return Row(
+        return Column(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.visibility_outlined, size: 16),
-                label: const Text('View Details'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF5B67F1),
-                  side: const BorderSide(color: Color(0xFF5B67F1)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
+            // Payment status line
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: contract.isPaid ? Colors.green[50] : Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: contract.isPaid
+                        ? Colors.green[200]!
+                        : Colors.orange[200]!),
+              ),
+              child: Text(
+                contract.isPaid
+                    ? 'Payment Status: Paid ✔'
+                    : 'Payment Status: Pending',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: contract.isPaid
+                        ? Colors.green[800]
+                        : Colors.orange[800]),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.star_outline, size: 16),
-                label: const Text('Leave Review'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+
+            // Pay Now: completed but not yet paid
+            if (!contract.isPaid)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      _openPaymentScreen(context, contract.contractId),
+                  icon: const Icon(Icons.payment, size: 16),
+                  label: const Text('Pay Now'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00BFA5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
               ),
+
+            // Existing buttons, unchanged
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.visibility_outlined, size: 16),
+                    label: const Text('View Details'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF5B67F1),
+                      side: const BorderSide(color: Color(0xFF5B67F1)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.star_outline, size: 16),
+                    label: const Text('Leave Review'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -503,23 +569,19 @@ class ClientContractCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             Icon(ContractStatusHelper.icon(newStatus), color: color),
             const SizedBox(width: 8),
-            Text(title,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Text(message,
-            style: TextStyle(color: Colors.grey[600])),
+        content: Text(message, style: TextStyle(color: Colors.grey[600])),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {

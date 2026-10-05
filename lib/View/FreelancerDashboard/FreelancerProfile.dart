@@ -604,8 +604,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             final uid = FirebaseAuth.instance.currentUser?.uid;
                             if (uid == null ||
                                 titleCtrl.text.isEmpty ||
-                                pickedFile == null)
+                                pickedFile == null) {
                               return;
+                            }
                             Navigator.pop(ctx);
                             context.read<FreelancerProfileBloc>().add(
                               UploadPortfolioImage(

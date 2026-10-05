@@ -1,152 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class NotificationModel {
-  final String id;
-  final String title;
-  final String description;
-  final String time;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
-  final bool isRead;
-  final NotificationType type;
+// ✅ Use the REAL model — delete any local NotificationModel/NotificationType
+// class from this file. This was the source of the earlier type-mismatch bug.
+import 'package:super_project/model/notificationModel.dart';
+import 'package:super_project/viewmodel/Bloc/notificationBloc.dart';
+import 'package:super_project/viewmodel/Events/notificationEvent.dart';
+import 'package:super_project/viewmodel/States/notificationState.dart';
 
-  NotificationModel({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.time,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBgColor,
-    this.isRead = false,
-    required this.type,
-  });
-}
-
-enum NotificationType { proposal, message, projectUpdate, payment }
-
+/// Shared notification screen for BOTH Client and Freelancer.
+/// Data comes from the same `notifications` Firestore collection,
+/// filtered by [currentUserId] — so this one screen works for both roles.
+/// Push it from either dashboard:
+///   Navigator.push(context, MaterialPageRoute(
+///     builder: (_) => NotificationScreen(currentUserId: currentUser.uid),
+///   ));
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({super.key});
+  final String currentUserId;
+
+  /// Optional — handle navigation when a notification is tapped
+  /// (e.g. open the related project or bid). If omitted, taps only
+  /// mark the notification as read.
+  final void Function(NotificationModel notification)? onNotificationTap;
+
+  const NotificationScreen({
+    super.key,
+    required this.currentUserId,
+    this.onNotificationTap,
+  });
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  List<NotificationModel> notifications = [
-    NotificationModel(
-      id: '1',
-      title: 'Project Proposal Received',
-      description: 'You have a new proposal for your Website Design...',
-      time: '10m',
-      icon: Icons.description_outlined,
-      iconColor: const Color(0xFF00D9D9),
-      iconBgColor: const Color(0xFFE0F7F7),
-      type: NotificationType.proposal,
-    ),
-    NotificationModel(
-      id: '2',
-      title: 'Message from Alex',
-      description: 'Alex sent you a message regarding your proposal...',
-      time: '2h',
-      icon: Icons.chat_bubble_outline,
-      iconColor: const Color(0xFF00D9D9),
-      iconBgColor: const Color(0xFFE0F7F7),
-      type: NotificationType.message,
-    ),
-    NotificationModel(
-      id: '3',
-      title: 'Project Update',
-      description: 'Your Social Media Marketing Campaign project...',
-      time: '1d',
-      icon: Icons.edit_outlined,
-      iconColor: const Color(0xFF757575),
-      iconBgColor: const Color(0xFFEEEEEE),
-      isRead: true,
-      type: NotificationType.projectUpdate,
-    ),
-    NotificationModel(
-      id: '4',
-      title: 'Payment Received',
-      description: 'You have received a payment of \$250 for your...',
-      time: '1d',
-      icon: Icons.account_balance_wallet_outlined,
-      iconColor: const Color(0xFFD4A574),
-      iconBgColor: const Color(0xFFF5EDE0),
-      isRead: true,
-      type: NotificationType.payment,
-    ),
-  ];
-
-  void _markAsRead(String id) {
-    setState(() {
-      final index = notifications.indexWhere((n) => n.id == id);
-      if (index != -1) {
-        notifications[index] = NotificationModel(
-          id: notifications[index].id,
-          title: notifications[index].title,
-          description: notifications[index].description,
-          time: notifications[index].time,
-          icon: notifications[index].icon,
-          iconColor: notifications[index].iconColor,
-          iconBgColor: notifications[index].iconBgColor,
-          isRead: true,
-          type: notifications[index].type,
-        );
-      }
-    });
-  }
-
-  void _markAllAsRead() {
-    setState(() {
-      notifications =
-          notifications
-              .map(
-                (n) => NotificationModel(
-                  id: n.id,
-                  title: n.title,
-                  description: n.description,
-                  time: n.time,
-                  icon: n.icon,
-                  iconColor: n.iconColor,
-                  iconBgColor: n.iconBgColor,
-                  isRead: true,
-                  type: n.type,
-                ),
-              )
-              .toList();
-    });
-  }
-
-  void _deleteNotification(String id) {
-    setState(() {
-      notifications.removeWhere((n) => n.id == id);
-    });
-  }
-
-  void _handleNotificationTap(NotificationModel notification) {
-    _markAsRead(notification.id);
-
-    // Navigate based on notification type
-    switch (notification.type) {
-      case NotificationType.proposal:
-        // Navigate to proposals screen
-        _showSnackbar('Opening proposal details...');
-        break;
-      case NotificationType.message:
-        // Navigate to messages screen
-        _showSnackbar('Opening message...');
-        break;
-      case NotificationType.projectUpdate:
-        // Navigate to project details
-        _showSnackbar('Opening project details...');
-        break;
-      case NotificationType.payment:
-        // Navigate to payment/wallet screen
-        _showSnackbar('Opening payment details...');
-        break;
-    }
+  @override
+  void initState() {
+    super.initState();
+    context.read<NotificationBloc>().add(
+      LoadNotifications(widget.currentUserId),
+    );
   }
 
   void _showSnackbar(String message) {
@@ -155,16 +48,21 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
+  void _handleNotificationTap(NotificationModel notification) {
+    if (!notification.isRead) {
+      context.read<NotificationBloc>().add(
+        MarkNotificationRead(notification.notificationId),
+      );
+    }
+    if (widget.onNotificationTap != null) {
+      widget.onNotificationTap!(notification);
+      return;
+    }
+    _showSnackbar(notification.title);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final todayNotifications =
-        notifications
-            .where((n) => n.time.contains('m') || n.time.contains('h'))
-            .toList();
-    final yesterdayNotifications =
-        notifications.where((n) => n.time.contains('d')).toList();
-    final unreadCount = notifications.where((n) => !n.isRead).length;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
@@ -183,45 +81,157 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ),
         actions: [
-          if (unreadCount > 0)
-            TextButton(
-              onPressed: _markAllAsRead,
-              child: const Text(
-                'Mark all read',
-                style: TextStyle(
-                  color: Color(0xFF00D9D9),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+          BlocBuilder<NotificationBloc, Notificationstate>(
+            builder: (context, state) {
+              if (state.unreadCount == 0) return const SizedBox.shrink();
+              return TextButton(
+                onPressed:
+                    () => context.read<NotificationBloc>().add(
+                      MarkAllNotificationsRead(widget.currentUserId),
+                    ),
+                child: const Text(
+                  'Mark all read',
+                  style: TextStyle(
+                    color: Color(0xFF00D9D9),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {
-              _showOptionsMenu();
-            },
+            onPressed: _showOptionsMenu,
           ),
         ],
       ),
-      body:
-          notifications.isEmpty
-              ? _buildEmptyState()
-              : ListView(
-                padding: const EdgeInsets.only(top: 8),
-                children: [
-                  if (todayNotifications.isNotEmpty) ...[
-                    _buildSectionHeader('Today'),
-                    ...todayNotifications.map((n) => _buildNotificationCard(n)),
-                  ],
-                  if (yesterdayNotifications.isNotEmpty) ...[
-                    _buildSectionHeader('Yesterday'),
-                    ...yesterdayNotifications.map(
-                      (n) => _buildNotificationCard(n),
-                    ),
-                  ],
-                ],
-              ),
+      body: BlocBuilder<NotificationBloc, Notificationstate>(
+        builder: (context, state) {
+          if (state.status == NotificationStatus.loading &&
+              state.notifications.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state.status == NotificationStatus.failure) {
+            return Center(
+              child: Text(state.errorMessage ?? 'Something went wrong'),
+            );
+          }
+
+          if (state.notifications.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          final grouped = _groupByDate(state.notifications);
+
+          return ListView(
+            padding: const EdgeInsets.only(top: 8),
+            children: [
+              for (final group in grouped.entries) ...[
+                _buildSectionHeader(group.key),
+                ...group.value.map((n) => _buildNotificationCard(n)),
+              ],
+            ],
+          );
+        },
+      ),
     );
+  }
+
+  /// Groups notifications into Today / Yesterday / Earlier based on
+  /// their real createdAt timestamp (replaces the old string-matching hack).
+  Map<String, List<NotificationModel>> _groupByDate(
+    List<NotificationModel> notifications,
+  ) {
+    final now = DateTime.now();
+    final today = <NotificationModel>[];
+    final yesterday = <NotificationModel>[];
+    final earlier = <NotificationModel>[];
+
+    for (final n in notifications) {
+      final diff = now.difference(n.createdAt).inDays;
+      final isSameDay =
+          n.createdAt.year == now.year &&
+          n.createdAt.month == now.month &&
+          n.createdAt.day == now.day;
+      if (isSameDay) {
+        today.add(n);
+      } else if (diff == 1) {
+        yesterday.add(n);
+      } else {
+        earlier.add(n);
+      }
+    }
+
+    return {
+      if (today.isNotEmpty) 'Today': today,
+      if (yesterday.isNotEmpty) 'Yesterday': yesterday,
+      if (earlier.isNotEmpty) 'Earlier': earlier,
+    };
+  }
+
+  String _relativeTime(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+
+  /// Icon + colors per notification type — mirrors the original design's
+  /// teal/grey/tan palette, extended to cover bid/project events.
+  (IconData, Color, Color) _styleFor(NotificationType type) {
+    switch (type) {
+      case NotificationType.newBid:
+        return (
+          Icons.description_outlined,
+          const Color(0xFF00D9D9),
+          const Color(0xFFE0F7F7),
+        );
+      case NotificationType.message:
+        return (
+          Icons.chat_bubble_outline,
+          const Color(0xFF00D9D9),
+          const Color(0xFFE0F7F7),
+        );
+      case NotificationType.bidAccepted:
+        return (
+          Icons.celebration_outlined,
+          const Color(0xFF2E7D32),
+          const Color(0xFFE3F5E5),
+        );
+      case NotificationType.bidRejected:
+        return (
+          Icons.cancel_outlined,
+          const Color(0xFFD32F2F),
+          const Color(0xFFFCE4E4),
+        );
+      case NotificationType.bidWithDrawn:
+        return (
+          Icons.remove_circle_outline,
+          const Color(0xFFEF6C00),
+          const Color(0xFFFCEBD9),
+        );
+      case NotificationType.bidStatusChanged:
+        return (
+          Icons.trending_up_outlined,
+          const Color(0xFF6A1B9A),
+          const Color(0xFFEDE0F5),
+        );
+      case NotificationType.projectStatusChanged:
+        return (
+          Icons.edit_outlined,
+          const Color(0xFF757575),
+          const Color(0xFFEEEEEE),
+        );
+      case NotificationType.generic:
+        return (
+          Icons.notifications_outlined,
+          const Color(0xFF757575),
+          const Color(0xFFEEEEEE),
+        );
+    }
   }
 
   Widget _buildEmptyState() {
@@ -245,7 +255,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'When you get notifications, they\'ll show up here',
+            "When you get notifications, they'll show up here",
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
@@ -268,8 +278,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Widget _buildNotificationCard(NotificationModel notification) {
+    final (icon, iconColor, iconBgColor) = _styleFor(notification.type);
+
     return Dismissible(
-      key: Key(notification.id),
+      key: Key(notification.notificationId),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -278,7 +290,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
-        _deleteNotification(notification.id);
+        context.read<NotificationBloc>().add(
+          DeleteNotification(notification.notificationId),
+        );
         _showSnackbar('Notification deleted');
       },
       child: Container(
@@ -308,14 +322,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: notification.iconBgColor,
+                      color: iconBgColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      notification.icon,
-                      color: notification.iconColor,
-                      size: 24,
-                    ),
+                    child: Icon(icon, color: iconColor, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -338,7 +348,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               ),
                             ),
                             Text(
-                              notification.time,
+                              _relativeTime(notification.createdAt),
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF999999),
@@ -348,7 +358,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          notification.description,
+                          notification.message,
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF666666),
@@ -403,9 +413,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   title: const Text('Clear All'),
                   onTap: () {
                     Navigator.pop(context);
-                    setState(() {
-                      notifications.clear();
-                    });
+                    final bloc = context.read<NotificationBloc>();
+                    for (final n in bloc.state.notifications) {
+                      bloc.add(DeleteNotification(n.notificationId));
+                    }
                     _showSnackbar('All notifications cleared');
                   },
                 ),

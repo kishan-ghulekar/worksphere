@@ -1,6 +1,6 @@
 // lib/viewmodel/Bloc/clientProfileBloc.dart
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:super_project/model/clientModel.dart';
 import 'package:super_project/repository/clientRepository.dart';
 import 'package:super_project/viewmodel/Events/clientEvents.dart';

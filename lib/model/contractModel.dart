@@ -69,6 +69,10 @@ class ContractModel extends Equatable {
   final DateTime startDate;
   final DateTime? deadline;
 
+  /// 'pending' | 'success'. Written ONLY by the backend after Razorpay
+  /// verification. Different from [paymentReleased] ("released to freelancer").
+  final String paymentStatus;
+
   const ContractModel({
     required this.contractId,
     required this.projectId,
@@ -85,7 +89,10 @@ class ContractModel extends Equatable {
     required this.paymentReleased,
     required this.startDate,
     this.deadline,
+    this.paymentStatus = 'pending',
   });
+
+  bool get isPaid => paymentStatus == 'success';
 
   double get progressValue {
     if (milestones.isEmpty) return 0;
@@ -107,6 +114,7 @@ class ContractModel extends Equatable {
         'milestones': milestones.map((m) => m.toMap()).toList(),
         'workSubmitted': workSubmitted,
         'paymentReleased': paymentReleased,
+        'paymentStatus': paymentStatus,
         'startDate': Timestamp.fromDate(startDate),
         'deadline': deadline != null ? Timestamp.fromDate(deadline!) : null,
       };
@@ -127,6 +135,7 @@ class ContractModel extends Equatable {
             .toList(),
         workSubmitted: map['workSubmitted'] as bool? ?? false,
         paymentReleased: map['paymentReleased'] as bool? ?? false,
+        paymentStatus: map['paymentStatus'] as String? ?? 'pending',
         startDate: map['startDate'] != null
             ? (map['startDate'] as Timestamp).toDate()
             : DateTime.now(),
@@ -140,6 +149,7 @@ class ContractModel extends Equatable {
     List<MilestoneModel>? milestones,
     bool? workSubmitted,
     bool? paymentReleased,
+    String? paymentStatus,
   }) =>
       ContractModel(
         contractId: contractId,
@@ -155,11 +165,12 @@ class ContractModel extends Equatable {
         milestones: milestones ?? this.milestones,
         workSubmitted: workSubmitted ?? this.workSubmitted,
         paymentReleased: paymentReleased ?? this.paymentReleased,
+        paymentStatus: paymentStatus ?? this.paymentStatus,
         startDate: startDate,
         deadline: deadline,
       );
 
   @override
   List<Object?> get props =>
-      [contractId, status, workSubmitted, paymentReleased];
+      [contractId, status, workSubmitted, paymentReleased, paymentStatus];
 }

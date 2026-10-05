@@ -69,9 +69,14 @@ class _FreelancerdashboardState extends State<Freelancerdashboard> {
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: Colors.grey[800]),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => NotificationScreen()),
-              );
+             Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => NotificationScreen(
+      currentUserId: FirebaseAuth.instance.currentUser!.uid,
+    ),
+  ),
+);
             },
           ),
         ],

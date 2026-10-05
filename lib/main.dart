@@ -10,6 +10,7 @@ import 'package:super_project/repository/chatRepository.dart';
 import 'package:super_project/repository/clientRepository.dart';
 import 'package:super_project/repository/contractRepository.dart';
 import 'package:super_project/repository/freelancerRepository.dart';
+import 'package:super_project/repository/notificationRepository.dart';
 import 'package:super_project/repository/projectRepository.dart';
 import 'package:super_project/viewmodel/Bloc/authBloc.dart';
 import 'package:super_project/viewmodel/Bloc/bidBloc.dart';
@@ -18,9 +19,10 @@ import 'package:super_project/viewmodel/Bloc/clientbloc.dart';
 import 'package:super_project/viewmodel/Bloc/contractBloc.dart';
 import 'package:super_project/viewmodel/Bloc/freelancerProfileBloc.dart';
 import 'package:super_project/viewmodel/Bloc/message_bloc.dart';
+import 'package:super_project/viewmodel/Bloc/notificationBloc.dart';
 import 'package:super_project/viewmodel/Bloc/projectBloc.dart';
 
-void main() async {
+ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   FirebaseFirestore.instance.settings = const Settings(
@@ -68,14 +70,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => AuthBloc(AuthRepository())),
+        BlocProvider(create: (_) => NotificationBloc(NotificationRepository())),
         BlocProvider(create: (_) => ProjectBloc(ProjectRepository())),
         BlocProvider(create: (_) => BidBloc(BidRepository())),
         BlocProvider(
           create: (_) => FreelancerProfileBloc(FreelancerRepository()),
         ),
-        BlocProvider(
-          create: (_) => ClientProfileBloc(ClientRepository()),
-        ),
+        BlocProvider(create: (_) => ClientProfileBloc(ClientRepository())),
         BlocProvider(create: (_) => ContractBloc(ContractRepository())),
         BlocProvider(create: (_) => ChatBloc(ChatRepository())),
         BlocProvider(create: (_) => MessageBloc(ChatRepository())),
